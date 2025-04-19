@@ -183,8 +183,12 @@ async function getWeather(station: string, apiKey: string) {
   return { ok: false, weather: null };
 }
 
+interface Env {
+  WEATHER_API_KEY: string;
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env: Env) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/bustimes")) {
