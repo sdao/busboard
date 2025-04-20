@@ -34,7 +34,7 @@ article {
 	display: flex;
 	align-items: center;
 	justify-content: space-evenly;
-	background-color: #111;
+	background-color: #181818;
 	border: 2px solid black;
 	padding: 0.5em;
 	margin: 0.1em;
@@ -148,7 +148,7 @@ h1>* {
 }
 
 .weather-description-scroll {
-	animation: 10s linear infinite scroll-in;
+	animation: 15s linear infinite scroll-in;
 }
 
 .weather-description>div {
