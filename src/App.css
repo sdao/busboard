@@ -21,6 +21,11 @@
 	--low-color: hsl(220, 80%, 70%);;
 }
 
+.hide-mouse-cursor
+{
+	cursor: none;
+}
+
 header {
 	display: flex;
 	align-items: center;

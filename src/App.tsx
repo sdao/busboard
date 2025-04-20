@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, WeatherConditions, WeatherForecast } from "../shared/types";
 import { Temporal } from '@js-temporal/polyfill';
 import 'core-js/actual/url';
@@ -115,6 +115,8 @@ function App() {
   const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0 });
   const [routeNames, setRouteNames] = useState<RouteNames>({ ok: false, routes: [] });
   const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
+  const [showMouseCursor, setShowMouseCursor] = useState(true);
+  const lastMouseMove = useRef(Temporal.Now.instant());
 
   useEffect(() => {
     let timeoutId = 0;
@@ -243,6 +245,21 @@ function App() {
     return () => window.clearTimeout(timeoutId);
   }, []);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (showMouseCursor)
+      {
+        const now = Temporal.Now.instant();
+        if (now.since(lastMouseMove.current).total("seconds") > 10)
+        {
+          setShowMouseCursor(false);
+        }
+      }
+    }, 10 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [showMouseCursor]);
+
   const rows = [];
   if (busTimes.ok && routeNames !== null) {
     for (const stop of busTimes.stops) {
@@ -255,13 +272,18 @@ function App() {
     }
   }
 
+  const handleMouseMove = () => {
+    lastMouseMove.current = Temporal.Now.instant();
+    setShowMouseCursor(true);
+  };
+
   return (
-    <>
+    <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>
       <WeatherDisplay current={weather} forecast={forecast} />
       <main>
         {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
       </main>
-    </>
+    </div>
   )
 }
 
