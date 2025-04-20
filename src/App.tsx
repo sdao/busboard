@@ -1,83 +1,68 @@
 import { useState, useEffect } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
-// import cloudflareLogo from './assets/Cloudflare_Logo.svg'
+import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, WeatherConditions, WeatherForecast } from "../shared/types";
+import { Temporal } from '@js-temporal/polyfill';
 import './App.css'
 
-type WeatherData = { description: string, temperature: number };
-type RouteNamesEntry = { routeId: string, directions: { directionId: number, name: string }[] };
-type BusTimesEntry = { stopId: string, routes: { routeId: string, directions: { directionId: number, nextTimes: { hasLeftTerminus: boolean, time: number }[] }[] }[] };
-
-function Weather({ weather, low, high } : { weather: null | { description: string, temperature: number }, low: null | number, high: null | number})
-{
-  function ctof(c: number | null)
-  {
-    if (c === null)
-    {
+function WeatherDisplay({ current, forecast }: { current: WeatherConditions, forecast: WeatherForecast }) {
+  function toFahrenheit(c: number | null) {
+    if (c === null) {
       return c;
     }
-    return Math.round(c * (9.0/5.0) + 32.0);
+    return Math.round(c * (9.0 / 5.0) + 32.0);
   }
-  function shortdesc(text: string)
-  {
-    if (text.includes(" and "))
-    {
+
+  function getShortDesc(text: string) {
+    if (text.includes(" and ")) {
       return text.split(" and ")[0];
     }
     return text;
   }
-  if (weather === null)
-  {
+
+  if (!current.ok && !forecast.ok) {
     return (
       <>
       </>
     )
   }
-  else
-  {
+  else {
     return (
       <header>
-        <div className="weatherDesc">
-        <div>{shortdesc(weather.description)}</div>
-        <div><span className='hitemp'>{ctof(high)}&deg;</span> / <span className='lotemp'>{ctof(low)}&deg;</span></div>
+        <div className={current.ok && forecast.ok ? "weather-description weather-description-scroll" : "weatherDesc"}>
+          {!current.ok ? <></> : <div>{getShortDesc(current.description)}</div>}
+          {!forecast.ok ? <></> : <div><span className='temperature-high'>{toFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{toFahrenheit(forecast.lowTemperature)}&deg;</span></div>}
         </div>
-        <div>{ctof(weather.temperature)}&deg;F</div>
+        {!current.ok ? <div></div> : <div>{toFahrenheit(current.temperature)}&deg;F</div>}
       </header>
     )
   }
 }
 
-function MinutesDisplay({ hasLeftTerminus, minutes } : { hasLeftTerminus: boolean, minutes: number})
-{
-  const classes = [];
-  if (hasLeftTerminus)
-  {
-    classes.push("hasLeftTerminus");
+function MinutesDisplay({ hasLeftTerminus, minutes }: { hasLeftTerminus: boolean, minutes: number }) {
+  const classes = ["minutes-until"];
+  if (hasLeftTerminus) {
+    classes.push("has-left-terminus");
   }
-  else
-  {
-    classes.push("hasNotLeftTerminus");
+  else {
+    classes.push("has-not-left-terminus");
   }
 
-  if (minutes <= 3)
-  {
+  if (minutes <= 3) {
     classes.push("imminent");
   }
-  else if (minutes <= 5)
-  {
-    classes.push("verySoon");
+  else if (minutes <= 5) {
+    classes.push("very-soon");
   }
-  else if (minutes <= 7)
-  {
+  else if (minutes <= 7) {
     classes.push("soon");
   }
+
   return <span className={classes.join(" ")}>{minutes}</span>
 }
 
-function BusTime({ routeId, directionId, nextTimes, routeNames } : { routeId: string, directionId: number, nextTimes: { hasLeftTerminus: boolean, time: number }[], routeNames: RouteNamesEntry[] })
-{
+function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { routeId: RouteId, directionId: DirectionId, nextInstances: StopInstance[], routeNames: RouteNames }) {
   const [_, setCount] = useState(0);
-  
+
+  // Force a re-render every 5 seconds to keep the remaining time up-to-date
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setCount((val) => val + 1);
@@ -87,77 +72,62 @@ function BusTime({ routeId, directionId, nextTimes, routeNames } : { routeId: st
   }, []);
 
   var name = `Route ${routeId}`;
-  const entry = routeNames.find((entry) => entry.routeId == routeId);
-  if (entry !== undefined)
-  {
-    const dir = entry.directions.find((dir) => dir.directionId == directionId);
-    if (dir !== undefined)
-    {
+  const route = routeNames.routes.find((route) => route.routeId == routeId);
+  if (route !== undefined) {
+    const dir = route.directions.find((dir) => dir.directionId == directionId);
+    if (dir !== undefined) {
       name = dir.name;
     }
   }
 
-  // const dirCode = directionId === 1 ? "N" : "S";
+  const routeClassName = String(routeId).length > 2 ? "route route3" : "route";
 
-  const nowSeconds = Date.now() / 1000.0;
-  const minutesUntil = nextTimes.map((timeEntry) => ({ hasLeftTerminus: timeEntry.hasLeftTerminus, time: Math.floor((timeEntry.time - nowSeconds) / 60.0) })).filter((timeEntry) => timeEntry.time >= 0.0).sort((a, b) => a.time - b.time).slice(0, 2);
+  const now = Temporal.Now.instant();
+  const instances = nextInstances
+    .map((instance) => ({ hasLeftTerminus: instance.hasLeftTerminus, instant: Temporal.Instant.from(instance.time) }))
+    .filter((instance) => Temporal.Instant.compare(instance.instant, now) >= 0)
+    .sort((a, b) => Temporal.Instant.compare(a.instant, b.instant))
+    .slice(0, 2);
 
-  const countdowns = [];
-  for (var i = 0; i < minutesUntil.length; ++i)
-  {
-    if (i !== 0)
-    {
-      countdowns.push(<span>,&nbsp;</span>);
+  const countdownDisplays = [];
+  for (var i = 0; i < instances.length; ++i) {
+    if (i !== 0) {
+      countdownDisplays.push(<span key={i * 2}>,&nbsp;</span>);
     }
-    countdowns.push(<MinutesDisplay hasLeftTerminus={minutesUntil[i].hasLeftTerminus} minutes={minutesUntil[i].time} />);
+    const minutesUntil = Math.floor(now.until(instances[i].instant).total("minutes"));
+    countdownDisplays.push(<MinutesDisplay key={i * 2 + 1} hasLeftTerminus={instances[i].hasLeftTerminus} minutes={minutesUntil} />);
   }
-
-  const className = String(routeId).length > 2 ? "route route3" : "route";
 
   return (
     <article>
-        <div><em className={className}><span>{routeId}</span></em></div>
-        <div>{name}</div>
-        <div>{countdowns} <div className="subtitle">minutes</div></div>
+      <div><h1 className={routeClassName}><span>{routeId}</span></h1></div>
+      <div className="headsign">{name}</div>
+      <div>{countdownDisplays}<div className="subtitle">minutes</div></div>
     </article>
   )
 }
 
 function App() {
-  // const [count, setCount] = useState(0);
-  // const [name, setName] = useState('unknown');
-
-  const [weather, setWeather] = useState<null | WeatherData>(null);
-  const [routeNames, setRouteNames] = useState<null | RouteNamesEntry[]>(null);
-  const [busTimes, setBusTimes] = useState<null | BusTimesEntry[]>(null);
-  const [low, setLow] = useState<null | number>(null);
-  const [high, setHigh] = useState<null | number>(null);
-  
-  // useEffect(() => {
-  //   const intervalId = window.setInterval(() => {
-  //     setCount((val) => val + 1);
-  //   }, 1000);
-
-  //   return () => window.clearInterval(intervalId);
-  // }, []);
+  const [weather, setWeather] = useState<WeatherConditions>({ ok: false, description: "", temperature: 0 });
+  const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0 });
+  const [routeNames, setRouteNames] = useState<RouteNames>({ ok: false, routes: [] });
+  const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
 
   useEffect(() => {
     var timeoutId = 0;
     const fetchRouteNames = async () => {
       console.log("Fetching route names...");
 
-      try
-      {
+      try {
         const response = await fetch('/routenames');
-        const data = await response.json();
-        const { ok, routes } = data;
-        if (ok === true) {
-          setRouteNames(routes);
+        const data = await response.json() as RouteNames;
+        if (data.ok) {
+          setRouteNames(data);
           return true;
         }
       }
-      catch (e)
-      {
+      catch (e) {
+        console.error(e);
       }
 
       timeoutId = window.setTimeout(() => fetchRouteNames(), 30 * 1000);
@@ -174,35 +144,24 @@ function App() {
     const searchParams = new URLSearchParams(paramsString);
     const stopIds = searchParams.get("stopids");
 
-    if (stopIds !== null)
-    {
+    if (stopIds !== null) {
       const fetchBusTimes = async () => {
         console.log("Fetching bus times...");
 
         var nextTimeout = 60 * 1000;
-        try
-        {
+        try {
           const response = await fetch(`/bustimes?stops=${stopIds}`);
-          const data = await response.json();
-          const { ok, stops } = data;
-          if (ok === true)
-          {
-            setBusTimes(stops);
+          const data = await response.json() as BusTimes;
+          if (data.ok) {
+            setBusTimes(data);
 
             // If there are no more scheduled buses for the night, throttle updates to every ten minutes
-            const isAnyNextTime = () => {
-              if (stops !== null)
-              {
-                for (const stop of (stops as BusTimesEntry[]))
-                {
-                  for (const route of stop.routes)
-                  {
-                    for (const dir of route.directions)
-                    {
-                      if (dir.nextTimes.length !== 0)
-                      {
-                        return true;
-                      }
+            const anyBusesScheduled = () => {
+              for (const stop of data.stops) {
+                for (const route of stop.routes) {
+                  for (const dir of route.directions) {
+                    if (dir.nextInstances.length !== 0) {
+                      return true;
                     }
                   }
                 }
@@ -210,14 +169,13 @@ function App() {
               return false;
             };
 
-            if (!isAnyNextTime())
-            {
+            if (!anyBusesScheduled()) {
               nextTimeout = 10 * 60 * 1000;
             }
           }
         }
-        catch (e)
-        {
+        catch (e) {
+          console.error(e);
         }
 
         timeoutId = window.setTimeout(() => fetchBusTimes(), nextTimeout);
@@ -233,43 +191,44 @@ function App() {
     var timeoutId = 0;
     const paramsString = window.location.search;
     const searchParams = new URLSearchParams(paramsString);
-    const weatherStation = searchParams.get("weather");
+    const wstation = searchParams.get("wstation");
     const wfo = searchParams.get("wfo");
     const x = searchParams.get("x");
     const y = searchParams.get("y");
 
-    if (weatherStation !== null && wfo !== null && x !== null && y !== null)
-    {
+    const loadCurrent = (wstation != null);
+    const loadForecast = (wfo !== null && x !== null && y !== null);
+
+    if (loadCurrent || loadForecast) {
       const fetchWeather = async () => {
         console.log("Fetching weather...");
 
-        try
-        {
-          const response = await fetch(`/weather?station=${weatherStation}`);
-          const data = await response.json();
-          const { ok, weather } = data;
-          if (ok === true)
-          {
-            setWeather(weather);
+        if (loadCurrent) {
+          try {
+            const response = await fetch(`/weather?station=${wstation}`);
+            const data = await response.json() as WeatherConditions;
+            if (data.ok) {
+              setWeather(data);
+              console.log("weather current: %s", JSON.stringify(data));
+            }
           }
-        }
-        catch (e)
-        {
+          catch (e) {
+            console.error(e);
+          }
         }
 
-        try
-        {
-          const response = await fetch(`/lohi?wfo=${wfo}&x=${x}&y=${y}`);
-          const data = await response.json();
-          const { ok, low, high } = data;
-          if (ok === true)
-          {
-            setLow(low);
-            setHigh(high);
+        if (loadForecast) {
+          try {
+            const response = await fetch(`/forecast?wfo=${wfo}&x=${x}&y=${y}`);
+            const data = await response.json() as WeatherForecast;
+            if (data.ok) {
+              setForecast(data);
+              console.log("weather forecast: %s", JSON.stringify(data));
+            }
           }
-        }
-        catch (e)
-        {
+          catch (e) {
+            console.error(e);
+          }
         }
 
         timeoutId = window.setTimeout(() => fetchWeather(), 15 * 60 * 1000);
@@ -282,86 +241,22 @@ function App() {
   }, []);
 
   const rows = [];
-  if (busTimes !== null && routeNames !== null)
-  {
-    for (const stop of busTimes)
-    {
-      for (const route of stop.routes)
-      {
-        for (const dir of route.directions)
-        {
-          rows.push(<BusTime routeId={route.routeId} directionId={dir.directionId} nextTimes={dir.nextTimes} routeNames={routeNames} />);
+  if (busTimes.ok && routeNames !== null) {
+    for (const stop of busTimes.stops) {
+      for (const route of stop.routes) {
+        for (const dir of route.directions) {
+          const key = `${stop.stopId}_${route.routeId}_${dir.directionId}`;
+          rows.push(<BusTimeDisplay key={key} routeId={route.routeId} directionId={dir.directionId} nextInstances={dir.nextInstances} routeNames={routeNames} />);
         }
       }
     }
   }
-  if (rows.length == 0)
-  {
-    rows.push(<article><div>Nothing scheduled</div></article>);
-  }
 
   return (
     <>
-      {/* <div>
-        <a href='https://vite.dev' target='_blank'>
-          <img src={viteLogo} className='logo' alt='Vite logo' />
-        </a>
-        <a href='https://react.dev' target='_blank'>
-          <img src={reactLogo} className='logo react' alt='React logo' />
-        </a>
-        <a href='https://workers.cloudflare.com/' target='_blank'>
-          <img src={cloudflareLogo} className='logo cloudflare' alt='Cloudflare logo' />
-        </a>
-      </div>
-      <h1>Vite + React + Cloudflare</h1>
-      <div className='card'>
-        <button
-          onClick={() => setCount((count) => count + 1)}
-          aria-label='increment'
-        >
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div> */}
-      {/* <div className='card'>
-        <button
-          onClick={() => {
-            fetch('/weather?station=KAUS')
-              .then((res) => res.json())
-              .then((data) => {
-                const { ok, weather } = data;
-                if (ok === true) {
-                  setWeather(weather);
-                }
-              });
-            fetch('/bustimes?stops=3757,2628,4382')
-              .then((res) => res.json())
-              .then((data) => {
-                const { ok, stops } = data;
-                if (ok === true) {
-                  setBusTimes(stops);
-                }
-              });
-            fetch('/routenames')
-              .then((res) => res.json())
-              .then((data) => {
-                const { ok, routes } = data;
-                if (ok === true) {
-                  setRouteNames(routes);
-                }
-              });
-          }}
-          aria-label='get name'
-        >
-          Click to Update Data
-        </button>
-      </div> */}
-      
-      <Weather weather={weather} high={high} low={low} />
+      <WeatherDisplay current={weather} forecast={forecast} />
       <main>
-        {rows}
+        {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
       </main>
     </>
   )
