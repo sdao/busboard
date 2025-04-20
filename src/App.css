@@ -13,7 +13,7 @@
 #root {
 	margin: 0 auto;
 	--route-color: hsl(210, 100%, 75%);
-	--disabled-color: hsl(0, 0%, 40%);
+	--disabled-color: hsl(0, 0%, 50%);
 	--urgent-color: hsl(0, 100%, 65%);
 	--warning-color: hsl(15, 100%, 65%);
 	--info-color: hsl(30, 100%, 65%);
@@ -148,7 +148,7 @@ h1>* {
 }
 
 .weather-description-scroll {
-	animation: 10s linear infinite alternate fade-in;
+	animation: 10s linear infinite scroll-in;
 }
 
 .weather-description>div {
@@ -165,7 +165,7 @@ h1>* {
 	transform: translateY(var(--weather-transition));
 }
 
-@keyframes fade-in {
+@keyframes scroll-in {
 
 	0%,
 	45% {
@@ -173,10 +173,25 @@ h1>* {
 		--weather-transition-2: 100%;
 	}
 
-	55%,
-	100% {
+	/* scroll second div in 45-50 */
+	50% {
 		--weather-transition: -100%;
 		--weather-transition-2: 0%;
+		animation-timing-function: step-start;
+	}
+
+	/* swap divs */
+	51%,
+	95% {
+		--weather-transition: 100%;
+		--weather-transition-2: 0%;
+		animation-timing-function: initial;
+	}
+
+	/* scroll first div in 95-100 */
+	100% {
+		--weather-transition: 0%;
+		--weather-transition-2: -100%;
 	}
 }
 
