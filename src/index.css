@@ -1,3 +1,15 @@
+@property --weather-transition {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+@property --weather-transition-2 {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 100%;
+}
+
 :root {
   /* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */
   /* line-height: 1.5; */
@@ -7,8 +19,13 @@
   background: black;
   color: white;
   
-  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-  font-size: 2.5em;
+  /* font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; */
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-style: normal;
+
+  font-size: 3em;
 
   /* color: rgba(255, 255, 255, 0.87); */
   /* background-color: #242424; */
@@ -29,6 +46,7 @@ a:hover {
 }
 
 body {
+  animation: 60s linear infinite jitter;
   /* margin: 0;
   display: flex;
   place-items: center;
@@ -91,7 +109,7 @@ header
                 align-items: center;
                 justify-content: space-evenly;
                 background-color: #111;
-                color: hsl(220, 80%, 70%);
+                color: hsl(220, 100%, 75%);
                 border: 2px solid black;
                 padding: 0.5em;
                 margin: 0.1em;
@@ -107,7 +125,28 @@ header
               border-bottom-right-radius: 2em;
               border-bottom-left-radius: 2em;
             }
-            h1
+            
+            article > div, header > div
+            {
+                font-size: 2em;
+                margin: 0.1em;
+                flex: 1;
+                margin: 0.1em 0.2em;
+                /* text-wrap: nowrap; */
+                /* overflow: hidden; */
+                /* scrollbar-width: 0; */
+                /* text-overflow: ellipsis; */
+            }
+            article > div:last-child, header > div:last-child
+            {
+                font-size: 2em;
+                margin: 0.1em;
+                flex: none;
+                text-align: right;
+                color: white;
+            }
+
+            article > div:first-child, header > div:first-child
             {
                 font-size: 2em;
                 margin: 0.1em;
@@ -120,7 +159,7 @@ header
             .route
             {
                 display: inline-block;
-                background: hsl(220, 80%, 70%);;
+                background: hsl(220, 100%, 75%);
                 color: black;
                 border: 4px solid transparent;
                 padding: 0.1em 0.2em;
@@ -130,6 +169,7 @@ header
                 width: 1.2em;
                 text-align: center;
                 font-style: normal;
+                font-weight: 800;
             }
             .route3 span
             {
@@ -139,7 +179,7 @@ header
             .dir
             {
                 display: inline-block;
-                color: hsl(220, 60%, 70%);
+                color: hsl(220, 90%, 80%);
                 border: 4px solid hsl(220, 60%, 70%);
                 padding: 0.1em 0.35em;
                 border-radius: 2em;
@@ -147,30 +187,15 @@ header
                 font-size: 0.8em;
                 vertical-align: middle;
             }
-            h2
-            {
-                font-size: 2em;
-                margin: 0.1em;
-                flex: 1;
-                margin: 0.1em 0.2em;
-                text-wrap: nowrap;
-                overflow: hidden;
-                scrollbar-width: 0;
-                text-overflow: ellipsis;
-            }
-            h3
-            {
-                font-size: 2em;
-                margin: 0.1em;
-                flex: none;
-                text-align: right;
-                color: white;
-            }
             .subtitle
             {
                 font-size: 0.5em;
             }
 
+            .hasNotLeftTerminus
+            {
+              color: dimgray;
+            }
             .imminent
             {
               color: red;
@@ -184,4 +209,65 @@ header
             .soon
             {
               color: goldenrod;
+            }
+            .weatherDesc
+            {
+              display: grid;
+              --weather-transition: 0%;
+              --weather-transition-2: 100%;
+              animation: 10s linear infinite alternate fade-in;
+              overflow: hidden;
+            }
+            .weatherDesc > div
+            {
+              grid-row: 1;
+              grid-column: 1;
+            }
+
+            .weatherDesc > div:first-child{
+              transform: translateY(var(--weather-transition));
+            }
+
+            .weatherDesc > div:last-child{
+              transform: translateY(var(--weather-transition-2));
+            }
+
+            @keyframes fade-in {
+              0%, 45% {
+                --weather-transition: 0%;
+                --weather-transition-2: -100%;
+              }
+            
+              55%, 100% {
+                --weather-transition: 100%;
+                --weather-transition-2: 0%;
+              }
+            }
+
+            @keyframes jitter {
+              0%, 100% {
+                transform: translateX(0) translateY(0);
+              }
+
+              25% {
+                transform: translateX(5px) translateY(0);
+              }
+              
+              50% {
+                transform: translateX(5px) translateY(5px);
+              }
+            
+              75% {
+                transform: translateX(0) translateY(5px);
+              }
+            }
+
+            .hitemp
+            {
+              color: orange;
+            }
+
+            .lotemp
+            {
+              color: darkcyan;
             }

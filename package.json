@@ -12,6 +12,7 @@
 		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
+		"@js-temporal/polyfill": "^0.5.1",
 		"jszip": "^3.10.1",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"

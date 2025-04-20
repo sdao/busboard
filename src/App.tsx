@@ -6,10 +6,26 @@ import './App.css'
 
 type WeatherData = { description: string, temperature: number };
 type RouteNamesEntry = { routeId: string, directions: { directionId: number, name: string }[] };
-type BusTimesEntry = { stopId: string, routes: { routeId: string, directions: { directionId: number, nextTimes: number[] }[] }[] };
+type BusTimesEntry = { stopId: string, routes: { routeId: string, directions: { directionId: number, nextTimes: { hasLeftTerminus: boolean, time: number }[] }[] }[] };
 
-function Weather({ weather } : { weather: null | { description: string, temperature: number }})
+function Weather({ weather, low, high } : { weather: null | { description: string, temperature: number }, low: null | number, high: null | number})
 {
+  function ctof(c: number | null)
+  {
+    if (c === null)
+    {
+      return c;
+    }
+    return Math.round(c * (9.0/5.0) + 32.0);
+  }
+  function shortdesc(text: string)
+  {
+    if (text.includes(" and "))
+    {
+      return text.split(" and ")[0];
+    }
+    return text;
+  }
   if (weather === null)
   {
     return (
@@ -21,34 +37,44 @@ function Weather({ weather } : { weather: null | { description: string, temperat
   {
     return (
       <header>
-        <h2>{weather.description}</h2>
-        <h3>{Math.round(weather.temperature * (9.0/5.0) + 32.0)}&deg;F</h3>
+        <div className="weatherDesc">
+        <div>{shortdesc(weather.description)}</div>
+        <div><span className='hitemp'>{ctof(high)}&deg;</span> / <span className='lotemp'>{ctof(low)}&deg;</span></div>
+        </div>
+        <div>{ctof(weather.temperature)}&deg;F</div>
       </header>
     )
   }
 }
 
-function MinutesDisplay({ minutes } : { minutes: number})
+function MinutesDisplay({ hasLeftTerminus, minutes } : { hasLeftTerminus: boolean, minutes: number})
 {
-  if (minutes <= 10)
+  const classes = [];
+  if (hasLeftTerminus)
   {
-    return <span className="imminent">{minutes}</span>
-  }
-  else if (minutes <= 15)
-  {
-    return <span className="verySoon">{minutes}</span>
-  }
-  else if (minutes <= 20)
-  {
-    return <span className="soon">{minutes}</span>
+    classes.push("hasLeftTerminus");
   }
   else
   {
-    return <span>{minutes}</span>
+    classes.push("hasNotLeftTerminus");
   }
+
+  if (minutes <= 3)
+  {
+    classes.push("imminent");
+  }
+  else if (minutes <= 5)
+  {
+    classes.push("verySoon");
+  }
+  else if (minutes <= 7)
+  {
+    classes.push("soon");
+  }
+  return <span className={classes.join(" ")}>{minutes}</span>
 }
 
-function BusTime({ routeId, directionId, nextTimes, routeNames } : { routeId: string, directionId: number, nextTimes: number[], routeNames: RouteNamesEntry[] })
+function BusTime({ routeId, directionId, nextTimes, routeNames } : { routeId: string, directionId: number, nextTimes: { hasLeftTerminus: boolean, time: number }[], routeNames: RouteNamesEntry[] })
 {
   const [_, setCount] = useState(0);
   
@@ -74,7 +100,7 @@ function BusTime({ routeId, directionId, nextTimes, routeNames } : { routeId: st
   // const dirCode = directionId === 1 ? "N" : "S";
 
   const nowSeconds = Date.now() / 1000.0;
-  const minutesUntil = nextTimes.map((seconds) => Math.floor((seconds - nowSeconds) / 60.0)).filter((minutes) => minutes >= 0.0).sort((a, b) => a - b).slice(0, 2);
+  const minutesUntil = nextTimes.map((timeEntry) => ({ hasLeftTerminus: timeEntry.hasLeftTerminus, time: Math.floor((timeEntry.time - nowSeconds) / 60.0) })).filter((timeEntry) => timeEntry.time >= 0.0).sort((a, b) => a.time - b.time).slice(0, 2);
 
   const countdowns = [];
   for (var i = 0; i < minutesUntil.length; ++i)
@@ -83,16 +109,16 @@ function BusTime({ routeId, directionId, nextTimes, routeNames } : { routeId: st
     {
       countdowns.push(<span>,&nbsp;</span>);
     }
-    countdowns.push(<MinutesDisplay minutes={minutesUntil[i]} />);
+    countdowns.push(<MinutesDisplay hasLeftTerminus={minutesUntil[i].hasLeftTerminus} minutes={minutesUntil[i].time} />);
   }
 
   const className = String(routeId).length > 2 ? "route route3" : "route";
 
   return (
     <article>
-        <h1><em className={className}><span>{routeId}</span></em></h1>
-        <h2>{name}</h2>
-        <h3>{countdowns} <div className="subtitle">minutes</div></h3>
+        <div><em className={className}><span>{routeId}</span></em></div>
+        <div>{name}</div>
+        <div>{countdowns} <div className="subtitle">minutes</div></div>
     </article>
   )
 }
@@ -104,6 +130,8 @@ function App() {
   const [weather, setWeather] = useState<null | WeatherData>(null);
   const [routeNames, setRouteNames] = useState<null | RouteNamesEntry[]>(null);
   const [busTimes, setBusTimes] = useState<null | BusTimesEntry[]>(null);
+  const [low, setLow] = useState<null | number>(null);
+  const [high, setHigh] = useState<null | number>(null);
   
   // useEffect(() => {
   //   const intervalId = window.setInterval(() => {
@@ -206,8 +234,11 @@ function App() {
     const paramsString = window.location.search;
     const searchParams = new URLSearchParams(paramsString);
     const weatherStation = searchParams.get("weather");
+    const wfo = searchParams.get("wfo");
+    const x = searchParams.get("x");
+    const y = searchParams.get("y");
 
-    if (weatherStation !== null)
+    if (weatherStation !== null && wfo !== null && x !== null && y !== null)
     {
       const fetchWeather = async () => {
         console.log("Fetching weather...");
@@ -220,6 +251,21 @@ function App() {
           if (ok === true)
           {
             setWeather(weather);
+          }
+        }
+        catch (e)
+        {
+        }
+
+        try
+        {
+          const response = await fetch(`/lohi?wfo=${wfo}&x=${x}&y=${y}`);
+          const data = await response.json();
+          const { ok, low, high } = data;
+          if (ok === true)
+          {
+            setLow(low);
+            setHigh(high);
           }
         }
         catch (e)
@@ -251,7 +297,7 @@ function App() {
   }
   if (rows.length == 0)
   {
-    rows.push(<article><h2>Nothing scheduled</h2></article>);
+    rows.push(<article><div>Nothing scheduled</div></article>);
   }
 
   return (
@@ -313,7 +359,7 @@ function App() {
         </button>
       </div> */}
       
-      <Weather weather={weather} />
+      <Weather weather={weather} high={high} low={low} />
       <main>
         {rows}
       </main>
