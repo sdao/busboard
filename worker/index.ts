@@ -9,82 +9,93 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
   if (contentType.includes("application/octet-stream")) {
     try {
       const jsonString = new TextDecoder("utf-8").decode(await response.arrayBuffer());
-      const payload = JSON.parse(jsonString);
+      const payload = JSON.parse(jsonString) as unknown;
 
-      const arrivals: Map<StopId, Map<RouteId, Map<DirectionId, StopInstance[]>>> = new Map();
-      for (const stopId of stops) {
-        arrivals.set(stopId, new Map());
-      }
-
-      function getStopInstancesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): StopInstance[] | undefined {
-        const arrivalsStop = arrivals.get(stopId);
-        if (arrivalsStop === undefined) {
-          return undefined;
+      if (typeof payload === "object" && payload !== null && "entity" in payload && Array.isArray(payload.entity)) {
+        const arrivals: Map<StopId, Map<RouteId, Map<DirectionId, StopInstance[]>>> = new Map();
+        for (const stopId of stops) {
+          arrivals.set(stopId, new Map());
         }
 
-        var arrivalsRoute = arrivalsStop.get(routeId);
-        if (arrivalsRoute === undefined) {
-          arrivalsRoute = new Map();
-          arrivalsStop.set(routeId, arrivalsRoute);
-        }
-
-        var arrivalsDirection = arrivalsRoute.get(directionId);
-        if (arrivalsDirection === undefined) {
-          arrivalsDirection = [];
-          arrivalsRoute.set(directionId, arrivalsDirection);
-        }
-
-        return arrivalsDirection;
-      }
-
-      for (const entity of payload.entity) {
-        const { trip, stopTimeUpdate } = entity.tripUpdate;
-        if (trip !== undefined && stopTimeUpdate !== undefined) {
-          const { routeId, directionId } = trip;
-
-          var anyStopSequences = false;
-          var hasTerminusStopSequence = false;
-          for (const update of stopTimeUpdate) {
-            const { stopSequence } = update;
-            if (stopSequence !== undefined) {
-              anyStopSequences = true;
-              if (stopSequence === 1) {
-                hasTerminusStopSequence = true;
-              }
-            }
-
-            if (anyStopSequences && hasTerminusStopSequence) {
-              break;
-            }
+        function getStopInstancesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): StopInstance[] | undefined {
+          const arrivalsStop = arrivals.get(stopId);
+          if (arrivalsStop === undefined) {
+            return undefined;
           }
 
-          for (const update of stopTimeUpdate) {
-            const { arrival, stopId, scheduleRelationship } = update;
-            if (scheduleRelationship === "SCHEDULED") {
-              const instances = getStopInstancesArray(stopId, routeId, directionId);
-              if (instances !== undefined) {
-                const time = Temporal.Instant.fromEpochMilliseconds(arrival.time * 1000.0);
-                instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, time: time.toString() });
+          let arrivalsRoute = arrivalsStop.get(routeId);
+          if (arrivalsRoute === undefined) {
+            arrivalsRoute = new Map();
+            arrivalsStop.set(routeId, arrivalsRoute);
+          }
+
+          let arrivalsDirection = arrivalsRoute.get(directionId);
+          if (arrivalsDirection === undefined) {
+            arrivalsDirection = [];
+            arrivalsRoute.set(directionId, arrivalsDirection);
+          }
+
+          return arrivalsDirection;
+        }
+
+        for (const entity of payload.entity as unknown[]) {
+          if (typeof entity === "object" && entity !== null && "tripUpdate" in entity &&
+              typeof entity.tripUpdate === "object" && entity.tripUpdate !== null && "trip" in entity.tripUpdate && "stopTimeUpdate" in entity.tripUpdate) {
+            const { trip, stopTimeUpdate } = entity.tripUpdate;
+            if (typeof trip === "object" && trip !== null && "routeId" in trip && "directionId" in trip &&
+                Array.isArray(stopTimeUpdate)) {
+              const { routeId, directionId } = trip;
+              if (typeof routeId === "string" && typeof directionId === "number") {
+                let anyStopSequences = false;
+                let hasTerminusStopSequence = false;
+                for (const update of stopTimeUpdate as unknown[]) {
+                  if (typeof update === "object" && update !== null && "stopSequence" in update) {
+                    anyStopSequences = true;
+                    if (update.stopSequence === 1) {
+                      hasTerminusStopSequence = true;
+                    }
+                  }
+
+                  if (anyStopSequences && hasTerminusStopSequence) {
+                    break;
+                  }
+                }
+
+                for (const update of stopTimeUpdate as unknown[]) {
+                  if (typeof update === "object" && update !== null && "arrival" in update && "stopId" in update && "scheduleRelationship" in update) {
+                    const { arrival, stopId, scheduleRelationship } = update;
+                    if (typeof arrival === "object" && arrival !== null && "time" in arrival && typeof arrival.time === "string" &&
+                        typeof stopId === "string" &&
+                        scheduleRelationship === "SCHEDULED") {
+                      const instances = getStopInstancesArray(stopId, routeId, directionId);
+                      if (instances !== undefined) {
+                        const time = Temporal.Instant.fromEpochMilliseconds(parseInt(arrival.time) * 1000.0);
+                        instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, time: time.toString() });
+                      }
+                    }
+                  }
+                }
               }
             }
           }
         }
-      }
 
-      const niceStops = Array.from(arrivals, ([stopId, routes]) => {
-        const niceRoutes = Array.from(routes, ([routeId, directions]) => {
-          const niceDirections = Array.from(directions, ([directionId, times]) => {
-            const nextInstances = times.sort((a, b) => Temporal.Instant.compare(a.time, b.time)).slice(0, 5);
-            return { directionId, nextInstances };
+        const niceStops = Array.from(arrivals, ([stopId, routes]) => {
+          const niceRoutes = Array.from(routes, ([routeId, directions]) => {
+            const niceDirections = Array.from(directions, ([directionId, times]) => {
+              const nextInstances = times.sort((a, b) => Temporal.Instant.compare(a.time, b.time)).slice(0, 5);
+              return { directionId, nextInstances };
+            });
+            return { routeId, directions: niceDirections };
           });
-          return { routeId, directions: niceDirections };
+          return { stopId, routes: niceRoutes };
         });
-        return { stopId, routes: niceRoutes };
-      });
 
-      return { ok: true, stops: niceStops };
+        return { ok: true, stops: niceStops };
+      }
     }
     catch (e) {
+      console.error(e);
     }
   }
 
@@ -118,7 +129,7 @@ async function getRouteNames(): Promise<RouteNames> {
             const directionId = parseInt(fields[directionIdIndex]);
             const tripShortName = fields[tripShortNameIndex];
 
-            var directions = routeNames.get(routeId);
+            let directions = routeNames.get(routeId);
             if (directions === undefined) {
               directions = new Map();
               routeNames.set(routeId, directions);
@@ -139,6 +150,7 @@ async function getRouteNames(): Promise<RouteNames> {
       }
     }
     catch (e) {
+      console.error(e);
     }
   }
 
@@ -155,19 +167,23 @@ async function getWeatherCurrent(station: string, apiKey: string): Promise<Weath
   const contentType = headers.get("content-type") || "";
   if (contentType.includes("application/geo+json")) {
     try {
-      const payload = await response.json() as any;
-      const { properties } = payload;
-      if (properties !== undefined) {
-        const { textDescription, temperature } = properties;
-        if (textDescription !== undefined && temperature !== undefined) {
-          const { value } = temperature;
-          if (value !== undefined) {
-            return { ok: true, description: textDescription, temperature: value };
+      const payload = await response.json();
+      if (typeof payload === "object" && payload !== null && "properties" in payload)
+      {
+        const properties = payload.properties;
+        if (typeof properties === "object" && properties !== null && "textDescription" in properties && "temperature" in properties) {
+          const { textDescription, temperature } = properties;
+          if (typeof textDescription === "string" && typeof temperature === "object" && temperature !== null && "value" in temperature) {
+            const value = temperature.value;
+            if (typeof value === "number") {
+              return { ok: true, description: textDescription, temperature: value };
+            }
           }
         }
       }
     }
     catch (e) {
+      console.error(e);
     }
   }
 
@@ -184,62 +200,70 @@ async function getWeatherForecast(wfo: string, x: number, y: number, apiKey: str
   const contentType = headers.get("content-type") || "";
   if (contentType.includes("application/geo+json")) {
     try {
-      const payload = await response.json() as any;
-      const { properties } = payload;
-      if (properties !== undefined) {
-        const { maxTemperature, minTemperature } = properties;
-        if (maxTemperature !== undefined && minTemperature !== undefined) {
-          var low: null | number = null;
-          var high: null | number = null;
+      const payload = await response.json();
+      if (typeof payload === "object" && payload !== null && "properties" in payload)
+      {
+        const properties = payload.properties;
+        if (typeof properties === "object" && properties !== null && "minTemperature" in properties && "maxTemperature" in properties)
+        {
+          const { maxTemperature, minTemperature } = properties;
 
-          {
-            const { values } = maxTemperature;
-            if (values !== undefined) {
+          let high: null | number = null;
+          if (typeof maxTemperature === "object" && maxTemperature !== null && "values" in maxTemperature) {
+            const values = maxTemperature.values;
+            if (Array.isArray(values)) {
               const now = Temporal.Now.instant();
-              for (const entry of values) {
-                const { validTime, value } = entry;
-                if (validTime !== undefined && value !== undefined) {
-                  const [timeString, durationString] = (validTime as string).split("/");
-                  const time = Temporal.Instant.from(timeString);
-                  const duration = Temporal.Duration.from(durationString);
-                  const endTime = time.add(duration);
-                  if (Temporal.Instant.compare(now, endTime) <= 0) {
-                    high = value;
-                    break;
+              for (const entry of values as unknown[]) {
+                if (typeof entry === "object" && entry !== null && "validTime" in entry && "value" in entry)
+                {
+                  const { validTime, value } = entry;
+                  if (typeof validTime === "string" && typeof value === "number") {
+                    const [timeString, durationString] = validTime.split("/");
+                    const time = Temporal.Instant.from(timeString);
+                    const duration = Temporal.Duration.from(durationString);
+                    const endTime = time.add(duration);
+                    if (Temporal.Instant.compare(now, endTime) <= 0) {
+                      high = value;
+                      break;
+                    }
                   }
                 }
               }
             }
           }
 
-          {
-            const { values } = minTemperature;
-            if (values !== undefined) {
+          let low: null | number = null;
+          if (typeof minTemperature === "object" && minTemperature !== null && "values" in minTemperature) {
+            const values = minTemperature.values;
+            if (Array.isArray(values)) {
               const now = Temporal.Now.instant();
-              for (const entry of values) {
-                const { validTime, value } = entry;
-                if (validTime !== undefined && value !== undefined) {
-                  const [timeString, durationString] = (validTime as string).split("/");
-                  const time = Temporal.Instant.from(timeString);
-                  const duration = Temporal.Duration.from(durationString);
-                  const endTime = time.add(duration);
-                  if (Temporal.Instant.compare(now, endTime) <= 0) {
-                    low = value;
-                    break;
+              for (const entry of values as unknown[]) {
+                if (typeof entry === "object" && entry !== null && "validTime" in entry && "value" in entry)
+                {
+                  const { validTime, value } = entry;
+                  if (typeof validTime === "string" && typeof value === "number") {
+                    const [timeString, durationString] = validTime.split("/");
+                    const time = Temporal.Instant.from(timeString);
+                    const duration = Temporal.Duration.from(durationString);
+                    const endTime = time.add(duration);
+                    if (Temporal.Instant.compare(now, endTime) <= 0) {
+                      low = value;
+                      break;
+                    }
                   }
                 }
               }
             }
           }
 
-          if (low !== null && high !== null)
-          {
+          if (low !== null && high !== null) {
             return { ok: true, highTemperature: high, lowTemperature: low };
           }
         }
       }
     }
     catch (e) {
+      console.error(e);
     }
   }
 

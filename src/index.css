@@ -46,3 +46,20 @@ body {
     transform: translateX(0) translateY(5px);
   }
 }
+
+body>div
+{
+  animation: 600s linear infinite flash-burnin;
+}
+
+@keyframes flash-burnin {
+  0%,
+  99.8%, /* approx. 599/600 */
+  100% {
+    opacity: 1;
+  }
+
+  99.9% {
+    opacity: 0;
+  }
+}

@@ -13,9 +13,12 @@
 	},
 	"dependencies": {
 		"@js-temporal/polyfill": "^0.5.1",
+		"core-js": "^3.41.0",
+		"eslint-plugin-compat": "^6.0.2",
 		"jszip": "^3.10.1",
 		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react-dom": "^19.0.0",
+		"whatwg-fetch": "^3.6.20"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.0.8",
@@ -33,5 +36,8 @@
 		"typescript-eslint": "^8.24.1",
 		"vite": "^6.2.0",
 		"wrangler": "^4.12.0"
-	}
+	},
+	"browserslist": [
+		"defaults"
+	]
 }

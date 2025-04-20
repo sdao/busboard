@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, WeatherConditions, WeatherForecast } from "../shared/types";
 import { Temporal } from '@js-temporal/polyfill';
+import 'core-js/actual/url';
+import 'core-js/actual/url-search-params';
+import 'whatwg-fetch'
 import './App.css'
 
 function WeatherDisplay({ current, forecast }: { current: WeatherConditions, forecast: WeatherForecast }) {
@@ -60,7 +63,7 @@ function MinutesDisplay({ hasLeftTerminus, minutes }: { hasLeftTerminus: boolean
 }
 
 function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { routeId: RouteId, directionId: DirectionId, nextInstances: StopInstance[], routeNames: RouteNames }) {
-  const [_, setCount] = useState(0);
+  const [, setCount] = useState(0);
 
   // Force a re-render every 5 seconds to keep the remaining time up-to-date
   useEffect(() => {
@@ -71,7 +74,7 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { r
     return () => window.clearInterval(intervalId);
   }, []);
 
-  var name = `Route ${routeId}`;
+  let name = `Route ${routeId}`;
   const route = routeNames.routes.find((route) => route.routeId == routeId);
   if (route !== undefined) {
     const dir = route.directions.find((dir) => dir.directionId == directionId);
@@ -90,7 +93,7 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { r
     .slice(0, 2);
 
   const countdownDisplays = [];
-  for (var i = 0; i < instances.length; ++i) {
+  for (let i = 0; i < instances.length; ++i) {
     if (i !== 0) {
       countdownDisplays.push(<span key={i * 2}>,&nbsp;</span>);
     }
@@ -114,7 +117,7 @@ function App() {
   const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
 
   useEffect(() => {
-    var timeoutId = 0;
+    let timeoutId = 0;
     const fetchRouteNames = async () => {
       console.log("Fetching route names...");
 
@@ -139,7 +142,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    var timeoutId = 0;
+    let timeoutId = 0;
     const paramsString = window.location.search;
     const searchParams = new URLSearchParams(paramsString);
     const stopIds = searchParams.get("stopids");
@@ -148,7 +151,7 @@ function App() {
       const fetchBusTimes = async () => {
         console.log("Fetching bus times...");
 
-        var nextTimeout = 60 * 1000;
+        let nextTimeout = 60 * 1000;
         try {
           const response = await fetch(`/bustimes?stops=${stopIds}`);
           const data = await response.json() as BusTimes;
@@ -188,7 +191,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    var timeoutId = 0;
+    let timeoutId = 0;
     const paramsString = window.location.search;
     const searchParams = new URLSearchParams(paramsString);
     const wstation = searchParams.get("wstation");
