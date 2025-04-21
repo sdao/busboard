@@ -154,7 +154,7 @@ h1>* {
 }
 
 .weather-description-scroll {
-	animation: 15s linear infinite scroll-in;
+	animation: 30s linear infinite scroll-in;
 }
 
 .weather-description>div {
@@ -172,7 +172,6 @@ h1>* {
 }
 
 @keyframes scroll-in {
-
 	0%,
 	45% {
 		--weather-transition: 0%;
