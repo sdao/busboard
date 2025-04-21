@@ -13,7 +13,7 @@
 #root {
 	margin: 0 auto;
 	--route-color: hsl(210, 100%, 75%);
-	--disabled-color: hsl(0, 0%, 50%);
+	--disabled-color: hsl(0, 0%, 55%);
 	--urgent-color: hsl(0, 100%, 65%);
 	--warning-color: hsl(15, 100%, 65%);
 	--info-color: hsl(30, 100%, 65%);
@@ -127,6 +127,7 @@ h1>* {
 
 .minutes-until {
 	font-weight: 800;
+	font-size: 1.2em;
 }
 
 .has-not-left-terminus {

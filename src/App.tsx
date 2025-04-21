@@ -105,7 +105,7 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { r
     <article>
       <div><h1 className={routeClassName}><span>{routeId}</span></h1></div>
       <div className="headsign">{name}</div>
-      <div>{countdownDisplays}<div className="subtitle">minutes</div></div>
+      <div>{countdownDisplays.length == 0 ? <span>&mdash;</span> : countdownDisplays}<div className="subtitle">minutes</div></div>
     </article>
   )
 }
