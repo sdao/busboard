@@ -171,12 +171,29 @@ async function getWeatherCurrent(station: string, apiKey: string): Promise<Weath
       if (typeof payload === "object" && payload !== null && "properties" in payload)
       {
         const properties = payload.properties;
-        if (typeof properties === "object" && properties !== null && "textDescription" in properties && "temperature" in properties) {
-          const { textDescription, temperature } = properties;
-          if (typeof textDescription === "string" && typeof temperature === "object" && temperature !== null && "value" in temperature) {
-            const value = temperature.value;
-            if (typeof value === "number") {
-              return { ok: true, description: textDescription, temperature: value };
+        if (typeof properties === "object" && properties !== null &&
+            "textDescription" in properties && typeof properties.textDescription === "string") {
+          const parseMetarTemperature = (metar: string) => {
+            const components = metar.split(" ");
+            const tempDewPoint = components.find(comp => comp.startsWith("T") && comp.length === 9);
+            if (tempDewPoint !== undefined)
+            {
+              const negative = tempDewPoint[1] == "1" ? -1 : 1;
+              return negative * parseInt(tempDewPoint.slice(2, 5)) / 10.0;
+            }
+            return undefined;
+          };
+
+          // Use temperature if explicitly provided; otherwise if the METAR is available, parse from that instead
+          if ("temperature" in properties && typeof properties.temperature === "object" && properties.temperature !== null &&
+              "value" in properties.temperature && typeof properties.temperature.value === "number") {
+            return { ok: true, description: properties.textDescription, temperature: properties.temperature.value };
+          }
+          else if ("rawMessage" in properties && typeof properties.rawMessage === "string") {
+            const metarTemperature = parseMetarTemperature(properties.rawMessage);
+            if (metarTemperature !== undefined)
+            {
+              return { ok: true, description: properties.textDescription, temperature: metarTemperature };
             }
           }
         }
