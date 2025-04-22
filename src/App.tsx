@@ -357,7 +357,7 @@ function App() {
     setShowMouseCursor(true);
   };
 
-  const showRadarIfChancePrecipitationGreater = -1;
+  const showRadarIfChancePrecipitationGreater = 10;
 
   return (
     <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>
