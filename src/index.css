@@ -49,7 +49,7 @@ body {
 
 body>div
 {
-  animation: 600s linear infinite flash-burnin;
+  animation: 900s linear infinite flash-burnin;
 }
 
 @keyframes flash-burnin {

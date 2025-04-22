@@ -16,6 +16,8 @@
 		"core-js": "^3.41.0",
 		"eslint-plugin-compat": "^6.0.2",
 		"jszip": "^3.10.1",
+		"ol": "^10.5.0",
+		"ol-mapbox-style": "^12.5.0",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
 		"whatwg-fetch": "^3.6.20"

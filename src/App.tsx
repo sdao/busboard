@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import OLMap from 'ol/Map';
+import OLView from 'ol/View';
+import { fromLonLat } from 'ol/proj';
+import ImageLayer from 'ol/layer/Image';
+import ImageWMS from 'ol/source/ImageWMS';
+import { MapboxVectorLayer } from 'ol-mapbox-style';
 import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, WeatherConditions, WeatherForecast } from "../shared/types";
 import { Temporal } from '@js-temporal/polyfill';
 import 'core-js/actual/url';
@@ -110,9 +116,85 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { r
   )
 }
 
+import versatiles from './assets/versatiles-eclipse.json?url'
+
+const RadarMapComponent = () => {
+  const mapDivRef = useRef<HTMLDivElement | null>(null);
+  const olMapRef = useRef<OLMap>(null);
+
+  // Insert map
+  useEffect(() => {
+    const node = mapDivRef.current;
+    if (node) {
+      const map = new OLMap({
+        target: node,
+        layers: [
+          new MapboxVectorLayer({
+            styleUrl: versatiles
+          }),
+          new ImageLayer({
+            source: new ImageWMS({
+              url: 'https://nowcoast.noaa.gov/geoserver/ows?service=wms',
+              params: { 'LAYERS': 'weather_radar:conus_base_reflectivity_mosaic' },
+              ratio: 1,
+              serverType: 'geoserver',
+            }),
+          }),
+        ],
+        view: new OLView({
+          center: fromLonLat([-97.7501975, 30.2649153]),
+          zoom: 10
+        }),
+        controls: []
+      });
+
+      map.updateSize();
+
+      olMapRef.current = map;
+      return () => map.setTarget(undefined);
+    }
+    return () => { };
+  }, []);
+
+  // Process map div resize
+  useEffect(() => {
+    const node = mapDivRef.current;
+    if (node) {
+      const observer = new ResizeObserver(() => {
+        const currentMap = olMapRef.current;
+        if (currentMap) {
+          currentMap.updateSize();
+        }
+      });
+
+      observer.observe(node);
+      return () => observer.unobserve(node);
+    }
+
+    return () => { };
+  }, []);
+
+  // Periodically refresh map
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {      
+      const currentMap = olMapRef.current;
+      if (currentMap)
+      {
+        currentMap.getAllLayers().forEach((layer) => {
+          layer.getSource()?.refresh();
+        });
+      }
+    }, 10 * 60 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  return <div ref={mapDivRef} style={{ width: '100%', minHeight: '400px' }}></div>;
+};
+
 function App() {
   const [weather, setWeather] = useState<WeatherConditions>({ ok: false, description: "", temperature: 0 });
-  const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0 });
+  const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0 });
   const [routeNames, setRouteNames] = useState<RouteNames>({ ok: false, routes: [] });
   const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
   const [showMouseCursor, setShowMouseCursor] = useState(true);
@@ -247,11 +329,9 @@ function App() {
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      if (showMouseCursor)
-      {
+      if (showMouseCursor) {
         const now = Temporal.Now.instant();
-        if (now.since(lastMouseMove.current).total("seconds") > 10)
-        {
+        if (now.since(lastMouseMove.current).total("seconds") > 10) {
           setShowMouseCursor(false);
         }
       }
@@ -277,11 +357,20 @@ function App() {
     setShowMouseCursor(true);
   };
 
+  const showRadarIfChancePrecipitationGreater = -1;
+
   return (
     <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>
       <WeatherDisplay current={weather} forecast={forecast} />
-      <main>
-        {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
+      <main className={forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater ? "compressed-layout" : ""}>
+        <section>
+          {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
+        </section>
+        {forecast.chancePrecipitation >= showRadarIfChancePrecipitationGreater
+          ? <section className='radar'>
+            <article><RadarMapComponent /></article>
+          </section>
+          : <></>}
       </main>
     </div>
   )

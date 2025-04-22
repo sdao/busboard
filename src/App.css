@@ -35,6 +35,23 @@ header {
 	font-size: 1em;
 }
 
+main
+{
+	display: flex;
+	align-items: stretch;
+	gap: 0.1em 0.1em;
+}
+
+main.compressed-layout
+{
+	font-size: 0.8em;
+}
+
+section
+{
+	flex: 1;
+}
+
 article {
 	display: flex;
 	align-items: center;
@@ -78,6 +95,26 @@ header>div:first-child {
 	font-size: 2em;
 	margin: 0.1em;
 	flex: none;
+}
+
+section.radar
+{
+	flex: 0.5;
+	display: flex;
+	align-items: stretch;
+}
+
+section.radar>article
+{
+	padding: 0;
+	overflow: clip;
+	width: 100%;
+}
+
+section.radar>article>div
+{
+	height: 100%;
+	margin: 0;
 }
 
 h1>* {

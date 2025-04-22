@@ -225,56 +225,51 @@ async function getWeatherForecast(wfo: string, x: number, y: number, apiKey: str
         {
           const { maxTemperature, minTemperature } = properties;
 
-          let high: null | number = null;
+          const findBestValue = (values: unknown[]) =>
+          {
+            const now = Temporal.Now.instant();
+            for (const entry of values) {
+              if (typeof entry === "object" && entry !== null && "validTime" in entry && "value" in entry)
+              {
+                const { validTime, value } = entry;
+                if (typeof validTime === "string" && typeof value === "number") {
+                  const [timeString, durationString] = validTime.split("/");
+                  const time = Temporal.Instant.from(timeString);
+                  const duration = Temporal.Duration.from(durationString);
+                  const endTime = time.add(duration);
+                  if (Temporal.Instant.compare(now, endTime) <= 0) {
+                    return value;
+                  }
+                }
+              }
+            }
+            return undefined;
+          };
+
+          let high: undefined | number = undefined;
           if (typeof maxTemperature === "object" && maxTemperature !== null && "values" in maxTemperature) {
             const values = maxTemperature.values;
             if (Array.isArray(values)) {
-              const now = Temporal.Now.instant();
-              for (const entry of values as unknown[]) {
-                if (typeof entry === "object" && entry !== null && "validTime" in entry && "value" in entry)
-                {
-                  const { validTime, value } = entry;
-                  if (typeof validTime === "string" && typeof value === "number") {
-                    const [timeString, durationString] = validTime.split("/");
-                    const time = Temporal.Instant.from(timeString);
-                    const duration = Temporal.Duration.from(durationString);
-                    const endTime = time.add(duration);
-                    if (Temporal.Instant.compare(now, endTime) <= 0) {
-                      high = value;
-                      break;
-                    }
-                  }
-                }
-              }
+              high = findBestValue(values);
             }
           }
 
-          let low: null | number = null;
+          let low: undefined | number = undefined;
           if (typeof minTemperature === "object" && minTemperature !== null && "values" in minTemperature) {
             const values = minTemperature.values;
             if (Array.isArray(values)) {
-              const now = Temporal.Now.instant();
-              for (const entry of values as unknown[]) {
-                if (typeof entry === "object" && entry !== null && "validTime" in entry && "value" in entry)
-                {
-                  const { validTime, value } = entry;
-                  if (typeof validTime === "string" && typeof value === "number") {
-                    const [timeString, durationString] = validTime.split("/");
-                    const time = Temporal.Instant.from(timeString);
-                    const duration = Temporal.Duration.from(durationString);
-                    const endTime = time.add(duration);
-                    if (Temporal.Instant.compare(now, endTime) <= 0) {
-                      low = value;
-                      break;
-                    }
-                  }
-                }
-              }
+              low = findBestValue(values);
             }
           }
 
-          if (low !== null && high !== null) {
-            return { ok: true, highTemperature: high, lowTemperature: low };
+          if (low !== undefined && high !== undefined) {            
+            let chancePrecipitation: undefined | number = undefined;
+            if ("probabilityOfPrecipitation" in properties && typeof properties.probabilityOfPrecipitation === "object" && properties.probabilityOfPrecipitation !== null &&
+                "values" in properties.probabilityOfPrecipitation && Array.isArray(properties.probabilityOfPrecipitation.values)) {
+              chancePrecipitation = findBestValue(properties.probabilityOfPrecipitation.values);
+            }
+
+            return { ok: true, highTemperature: high, lowTemperature: low, chancePrecipitation: chancePrecipitation ?? 0.0 };
           }
         }
       }
@@ -284,7 +279,7 @@ async function getWeatherForecast(wfo: string, x: number, y: number, apiKey: str
     }
   }
 
-  return { ok: false, highTemperature: 0, lowTemperature: 0 };
+  return { ok: false, highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0.0 };
 }
 
 interface Env {
