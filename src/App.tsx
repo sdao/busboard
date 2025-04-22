@@ -357,16 +357,24 @@ function App() {
     setShowMouseCursor(true);
   };
 
+  const forceRadar = (() =>
+  {
+    const paramsString = window.location.search;
+    const searchParams = new URLSearchParams(paramsString);
+    const flag = searchParams.get("radar");
+    return flag == "1" || flag?.toLowerCase() === "true";
+  })();
   const showRadarIfChancePrecipitationGreater = 10;
+  const showRadar = forceRadar || forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater;
 
   return (
     <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>
       <WeatherDisplay current={weather} forecast={forecast} />
-      <main className={forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater ? "compressed-layout" : ""}>
+      <main className={showRadar ? "compressed-layout" : ""}>
         <section>
           {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
         </section>
-        {forecast.chancePrecipitation >= showRadarIfChancePrecipitationGreater
+        {showRadar
           ? <section className='radar'>
             <article><RadarMapComponent /></article>
           </section>
