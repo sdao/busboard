@@ -197,6 +197,7 @@ function App() {
   const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0 });
   const [routeNames, setRouteNames] = useState<RouteNames>({ ok: false, routes: [] });
   const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
+  const [isFullscreen, setFullscreen] = useState(false);
   const [showMouseCursor, setShowMouseCursor] = useState(true);
   const lastMouseMove = useRef(Temporal.Now.instant());
 
@@ -340,6 +341,39 @@ function App() {
     return () => window.clearInterval(intervalId);
   }, [showMouseCursor]);
 
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (document.fullscreenElement) {
+        setFullscreen(true);
+      }
+      else {
+        setFullscreen(false);
+      }
+    };
+          
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (isFullscreen)
+    {
+      let wakeLockPromise = null;
+      try {
+        wakeLockPromise = navigator.wakeLock.request("screen");
+      } catch (e) {
+        console.error(e);
+      }
+
+      if (wakeLockPromise !== null)
+      {
+        return () => wakeLockPromise.then(wakeLock => wakeLock.release(), reason => console.error(reason));
+      }
+    }
+
+    return () => {};
+  }, [isFullscreen]);
+
   const rows = [];
   if (busTimes.ok && routeNames !== null) {
     for (const stop of busTimes.stops) {
@@ -357,6 +391,15 @@ function App() {
     setShowMouseCursor(true);
   };
 
+  const forceBus = (() =>
+  {
+    const paramsString = window.location.search;
+    const searchParams = new URLSearchParams(paramsString);
+    const flag = searchParams.get("force");
+    return flag == "1" || flag?.toLowerCase() === "true";
+  })();
+  const showBus = forceBus || rows.length > 0;
+
   const forceRadar = (() =>
   {
     const paramsString = window.location.search;
@@ -367,17 +410,36 @@ function App() {
   const showRadarIfChancePrecipitationGreater = 10;
   const showRadar = forceRadar || forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater;
 
+  let layoutClass = "";
+  if (showRadar && showBus)
+  {
+    layoutClass = "compressed-layout";
+  }
+  else if (!showRadar && !showBus)
+  {
+    layoutClass = "hidden-layout";
+  }
+
+  const enterFullscreen = () => {
+    document.body.requestFullscreen();
+  };
+
   return (
     <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>
+      <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
+        <button onClick={enterFullscreen}>Enter Fullscreen</button>
+      </div>
       <WeatherDisplay current={weather} forecast={forecast} />
-      <main className={showRadar ? "compressed-layout" : ""}>
-        <section>
-          {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
-        </section>
+      <main className={layoutClass}>
+        {showBus
+          ? <section>
+              {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
+            </section>
+          : <></>}
         {showRadar
           ? <section className='radar'>
-            <article><RadarMapComponent /></article>
-          </section>
+              <article><RadarMapComponent /></article>
+            </section>
           : <></>}
       </main>
     </div>

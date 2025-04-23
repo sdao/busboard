@@ -26,6 +26,14 @@
 	cursor: none;
 }
 
+.toolbar {
+	text-align: center;
+}
+
+.toolbar-hidden {
+	display: none;
+}
+
 header {
 	display: flex;
 	align-items: center;
@@ -45,6 +53,11 @@ main
 main.compressed-layout
 {
 	font-size: 0.8em;
+}
+
+main.hidden-layout
+{
+	display: none;
 }
 
 section
@@ -99,7 +112,7 @@ header>div:first-child {
 
 section.radar
 {
-	flex: 0.667;
+	flex: 1;
 	display: flex;
 	align-items: stretch;
 }
@@ -115,6 +128,11 @@ section.radar>article>div
 {
 	height: 100%;
 	margin: 0;
+}
+
+main.compressed-layout section.radar
+{
+	flex: 0.667;
 }
 
 h1>* {
