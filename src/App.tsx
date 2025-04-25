@@ -397,19 +397,23 @@ function App() {
     const paramsString = window.location.search;
     const searchParams = new URLSearchParams(paramsString);
     const flag = searchParams.get("force");
-    return flag == "1" || flag?.toLowerCase() === "true";
+    if (flag == "1" || flag?.toLowerCase() === "true") return true;
+    else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
+    else return null;
   })();
-  const showBus = forceBus || rows.length > 0;
+  const showBus = forceBus ?? (rows.length > 0);
 
   const forceRadar = (() =>
   {
     const paramsString = window.location.search;
     const searchParams = new URLSearchParams(paramsString);
     const flag = searchParams.get("radar");
-    return flag == "1" || flag?.toLowerCase() === "true";
+    if (flag == "1" || flag?.toLowerCase() === "true") return true;
+    else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
+    else return null;
   })();
   const showRadarIfChancePrecipitationGreater = 20;
-  const showRadar = forceRadar || forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater;
+  const showRadar = forceRadar ?? (forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater);
 
   let layoutClass = "";
   let headerClass = "";

@@ -38,8 +38,8 @@ header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 0.5em;
-	margin: 0.1em;
+	padding: 0.2em 0.5em;
+	margin: 0;
 	font-size: 1em;
 }
 
@@ -50,24 +50,20 @@ header.hidden-header
 
 main
 {
-	display: flex;
-	align-items: stretch;
+	display: grid;
+	grid-template-columns: 1fr;
 	gap: 0.1em 0.1em;
 }
 
 main.compressed-layout
 {
-	font-size: 0.8em;
+	grid-template-columns: 3fr 2fr;
+	font-size: 0.75em;
 }
 
 main.hidden-layout
 {
 	display: none;
-}
-
-section
-{
-	flex: 1;
 }
 
 article {
@@ -135,11 +131,6 @@ section.radar>article>div
 	margin: 0;
 }
 
-main.compressed-layout section.radar
-{
-	flex: 0.667;
-}
-
 h1>* {
 	vertical-align: top;
 }
@@ -188,10 +179,14 @@ h1>* {
 .minutes-until {
 	font-weight: 800;
 	font-size: 1.2em;
+	font-variant-numeric: tabular-nums;
 }
 
-.has-not-left-terminus {
-	color: var(--disabled-color);
+.has-not-left-terminus:after {
+	content: "*";
+	vertical-align: 40%;
+	font-size: 0.6em;
+	font-variant-ligatures: no-contextual;
 }
 
 .imminent {
