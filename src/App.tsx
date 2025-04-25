@@ -34,14 +34,15 @@ function WeatherDisplay({ current, forecast }: { current: WeatherConditions, for
     )
   }
   else {
+    const hasCurrentDesc = current.ok && !!current.description;
     return (
-      <header>
-        <div className={current.ok && forecast.ok ? "weather-description weather-description-scroll" : "weatherDesc"}>
-          {!current.ok ? <></> : <div>{getShortDesc(current.description)}</div>}
+      <>
+        <div className={hasCurrentDesc && forecast.ok ? "weather-description weather-description-scroll" : "weatherDesc"}>
+          {!hasCurrentDesc ? <></> : <div>{getShortDesc(current.description)}</div>}
           {!forecast.ok ? <></> : <div><span className='temperature-high'>{toFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{toFahrenheit(forecast.lowTemperature)}&deg;</span></div>}
         </div>
         {!current.ok ? <div></div> : <div>{toFahrenheit(current.temperature)}&deg;F</div>}
-      </header>
+      </>
     )
   }
 }
@@ -407,10 +408,11 @@ function App() {
     const flag = searchParams.get("radar");
     return flag == "1" || flag?.toLowerCase() === "true";
   })();
-  const showRadarIfChancePrecipitationGreater = 10;
+  const showRadarIfChancePrecipitationGreater = 20;
   const showRadar = forceRadar || forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater;
 
   let layoutClass = "";
+  let headerClass = "";
   if (showRadar && showBus)
   {
     layoutClass = "compressed-layout";
@@ -418,6 +420,7 @@ function App() {
   else if (!showRadar && !showBus)
   {
     layoutClass = "hidden-layout";
+    headerClass = "hidden-header";
   }
 
   const enterFullscreen = () => {
@@ -429,7 +432,9 @@ function App() {
       <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
         <button onClick={enterFullscreen}>Enter Fullscreen</button>
       </div>
-      <WeatherDisplay current={weather} forecast={forecast} />
+      <header className={headerClass}>
+        <WeatherDisplay current={weather} forecast={forecast} />
+      </header>
       <main className={layoutClass}>
         {showBus
           ? <section>

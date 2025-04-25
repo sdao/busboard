@@ -43,6 +43,11 @@ header {
 	font-size: 1em;
 }
 
+header.hidden-header
+{
+	display: none;
+}
+
 main
 {
 	display: flex;
