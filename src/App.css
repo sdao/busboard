@@ -221,6 +221,9 @@ h1>* {
 .weather-description>div {
 	grid-row: 1;
 	grid-column: 1;
+	overflow: hidden;
+  	white-space: nowrap;
+  	text-overflow: ellipsis;
 }
 
 .weather-description>div:last-child {
