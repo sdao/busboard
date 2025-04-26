@@ -357,6 +357,10 @@ function App() {
 
       try {
         const response = await fetch('/routenames');
+        if (!response.ok) {
+          throw new Error(`<${response.url}> responded with: ${response.status}`);
+        }
+        
         const data = await response.json() as RouteNames;
         if (data.ok) {
           setRouteNames(data);
@@ -388,6 +392,10 @@ function App() {
         let nextTimeout = 60 * 1000;
         try {
           const response = await fetch(`/bustimes?stops=${stopIds}`);
+          if (!response.ok) {
+            throw new Error(`<${response.url}> responded with: ${response.status}`);
+          }
+          
           const data = await response.json() as BusTimes;
           if (data.ok) {
             setBusTimes(data);
@@ -443,6 +451,10 @@ function App() {
         if (loadCurrent) {
           try {
             const response = await fetch(`/weather?station=${wstation}`);
+            if (!response.ok) {
+              throw new Error(`<${response.url}> responded with: ${response.status}`);
+            }
+
             const data = await response.json() as WeatherConditions;
             if (data.ok) {
               setWeather(data);
@@ -457,6 +469,10 @@ function App() {
         if (loadForecast) {
           try {
             const response = await fetch(`/forecast?wfo=${wfo}&x=${x}&y=${y}`);
+            if (!response.ok) {
+              throw new Error(`<${response.url}> responded with: ${response.status}`);
+            }
+
             const data = await response.json() as WeatherForecast;
             if (data.ok) {
               setForecast(data);
@@ -488,6 +504,10 @@ function App() {
 
         try {
           const response = await fetch(`/uv?zip=${zipcode}`);
+          if (!response.ok) {
+            throw new Error(`<${response.url}> responded with: ${response.status}`);
+          }
+
           const data = await response.json() as UvForecastDay;
           if (data.ok) {
             setUvForecast(data);

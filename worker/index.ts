@@ -4,9 +4,12 @@ import { DirectionId, RouteId, StopId, StopInstance, BusTimes, RouteNames, Weath
 
 async function getBusTimes(stops: string[]): Promise<BusTimes> {
   const response = await fetch("https://data.texas.gov/download/mqtr-wwpy/text%2Fplain");
-  const { headers } = response;
+  const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
-  if (contentType.includes("application/octet-stream")) {
+  if (!ok) {
+    console.log(`<${response.url}> responded with: ${response.status}`);
+  }
+  else if (contentType.includes("application/octet-stream")) {
     try {
       const jsonString = new TextDecoder("utf-8").decode(await response.arrayBuffer());
       const payload = JSON.parse(jsonString) as unknown;
@@ -104,9 +107,12 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
 
 async function getRouteNames(): Promise<RouteNames> {
   const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
-  const { headers } = response;
+  const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
-  if (contentType.includes("application/octet-stream")) {
+  if (!ok) {
+    console.log(`<${response.url}> responded with: ${response.status}`);
+  }
+  else if (contentType.includes("application/octet-stream")) {
     try {
       const zip = new JSZip();
       const zipData = await response.arrayBuffer();
@@ -163,9 +169,12 @@ async function getWeatherCurrent(station: string, apiKey: string): Promise<Weath
       "user-agent": apiKey
     }
   });
-  const { headers } = response;
+  const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
-  if (contentType.includes("application/geo+json")) {
+  if (!ok) {
+    console.log(`<${response.url}> responded with: ${response.status}`);
+  }
+  else if (contentType.includes("application/geo+json")) {
     try {
       const payload = await response.json();
       if (typeof payload === "object" && payload !== null && "properties" in payload)
@@ -213,9 +222,12 @@ async function getWeatherForecast(wfo: string, x: number, y: number, apiKey: str
       "user-agent": apiKey
     }
   });
-  const { headers } = response;
+  const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
-  if (contentType.includes("application/geo+json")) {
+  if (!ok) {
+    console.log(`<${response.url}> responded with: ${response.status}`);
+  }
+  else if (contentType.includes("application/geo+json")) {
     try {
       const payload = await response.json();
       if (typeof payload === "object" && payload !== null && "properties" in payload)
@@ -284,9 +296,12 @@ async function getWeatherForecast(wfo: string, x: number, y: number, apiKey: str
 
 async function getUvForecastDay(zip: string): Promise<UvForecastDay> {
   const response = await fetch(`https://data.epa.gov/efservice/getEnvirofactsUVHOURLY/ZIP/${zip}/JSON`);
-  const { headers } = response;
+  const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
+  if (!ok) {
+    console.log(`<${response.url}> responded with: ${response.status}`);
+  }
+  else if (contentType.includes("application/json")) {
     try {
       const payload = await response.json();
       if (Array.isArray(payload))
