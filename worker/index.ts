@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import { Temporal } from "@js-temporal/polyfill";
-import { DirectionId, RouteId, StopId, StopInstance, BusTimes, RouteNames, WeatherConditions, WeatherForecast } from "../shared/types";
+import { DirectionId, RouteId, StopId, StopInstance, BusTimes, RouteNames, WeatherConditions, WeatherForecast, UvForecastDay } from "../shared/types";
 
 async function getBusTimes(stops: string[]): Promise<BusTimes> {
   const response = await fetch("https://data.texas.gov/download/mqtr-wwpy/text%2Fplain");
@@ -282,6 +282,66 @@ async function getWeatherForecast(wfo: string, x: number, y: number, apiKey: str
   return { ok: false, highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0.0 };
 }
 
+async function getUvForecastDay(zip: string): Promise<UvForecastDay> {
+  const response = await fetch(`https://data.epa.gov/efservice/getEnvirofactsUVHOURLY/ZIP/${zip}/JSON`);
+  const { headers } = response;
+  const contentType = headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = await response.json();
+      if (Array.isArray(payload))
+      {
+        const forecastDay: UvForecastDay = { ok: true, forecasts: [] };
+        for (const element of payload as unknown[])
+        {
+          if (typeof element === "object" && element !== null &&
+              "DATE_TIME" in element && typeof element["DATE_TIME"] === "string" &&
+              "UV_VALUE" in element && typeof element["UV_VALUE"] === "number")
+          {
+            const parseTime = (d: string) => {
+              const components = d.split(" "); // Apr/26/2025 06 AM
+              if (components.length === 3)
+              {
+                const dateComponents = components[0].split("/"); // Apr/26/2025
+                if (dateComponents.length === 3)
+                {
+                  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+                  const month = months.indexOf(dateComponents[0].toUpperCase()) + 1;
+                  const day = parseInt(dateComponents[1]);
+                  const year = parseInt(dateComponents[2]);
+                  if (month >= 1 && month <= 12)
+                  {
+                    const hour12 = parseInt(components[1]);
+                    const pm = (components[2].toUpperCase() == "PM");
+                    const hour24 = pm ? hour12 + 12 : hour12;
+
+                    return Temporal.ZonedDateTime.from({ year, month, day, hour: hour24, timeZone: Temporal.Now.timeZoneId() });
+                  }
+                }
+              }
+
+              return undefined;
+            };
+
+            const time = parseTime(element.DATE_TIME);
+            if (time !== undefined)
+            {
+              forecastDay.forecasts.push({ uvIndex: element.UV_VALUE, time: time.toString() });
+            }
+          }
+        }
+
+        return forecastDay;
+      }
+    }
+    catch (e) {
+      console.error(e);
+    }
+  }
+
+  return { ok: false, forecasts: [] };
+}
+
 interface Env {
   WEATHER_API_KEY: string;
 }
@@ -314,6 +374,13 @@ export default {
       const y = url.searchParams.get("y");
       if (wfo !== null && x !== null && y !== null) {
         return Response.json(await getWeatherForecast(wfo, parseInt(x), parseInt(y), env.WEATHER_API_KEY));
+      }
+      return new Response(null, { status: 400 });
+    }
+    else if (url.pathname.startsWith("/uv")) {
+      const zipcode = url.searchParams.get("zip");
+      if (zipcode !== null) {
+        return Response.json(await getUvForecastDay(zipcode));
       }
       return new Response(null, { status: 400 });
     }

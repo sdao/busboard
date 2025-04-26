@@ -6,14 +6,16 @@ import ImageLayer from 'ol/layer/Image';
 import ImageWMS from 'ol/source/ImageWMS';
 import { MapboxVectorLayer } from 'ol-mapbox-style';
 import SunCalc from 'suncalc';
-import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, WeatherConditions, WeatherForecast } from "../shared/types";
+import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, UvForecastDay, WeatherConditions, WeatherForecast } from "../shared/types";
 import { Temporal } from '@js-temporal/polyfill';
 import 'core-js/actual/url';
 import 'core-js/actual/url-search-params';
 import 'whatwg-fetch'
 import './App.css'
 
-function WeatherDisplay({ current, forecast, lat, lon }: { current: WeatherConditions, forecast: WeatherForecast, lat: number, lon: number }) {
+function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: WeatherConditions, forecast: WeatherForecast, uvForecast: UvForecastDay, lat: number, lon: number }) {
+  const now = Temporal.Now.zonedDateTimeISO();
+
   function toFahrenheit(c: number | null) {
     if (c === null) {
       return c;
@@ -65,9 +67,9 @@ function WeatherDisplay({ current, forecast, lat, lon }: { current: WeatherCondi
     }
     else
     {
-      const now = new Date();
-      const times = SunCalc.getTimes(now, lat, lon);
-      if (now > times.sunrise && now < times.sunset)
+      const nowDate = new Date(now.epochMilliseconds);
+      const times = SunCalc.getTimes(nowDate, lat, lon);
+      if (nowDate > times.sunrise && nowDate < times.sunset)
       {
         return '🌞';
       }
@@ -85,7 +87,7 @@ function WeatherDisplay({ current, forecast, lat, lon }: { current: WeatherCondi
     return text;
   }
 
-  if (!current.ok && !forecast.ok) {
+  if (!current.ok && !forecast.ok && !uvForecast.ok) {
     return (
       <>
       </>
@@ -93,12 +95,41 @@ function WeatherDisplay({ current, forecast, lat, lon }: { current: WeatherCondi
   }
   else {
     const hasCurrentDesc = current.ok && !!current.description;
+
+    // Only show UV if it's high today
+    let uvMessage = null;
+    const maxUvValue = Math.max(...uvForecast.forecasts.map(f => f.uvIndex));
+    if (maxUvValue >= 3)
+    {
+      const currentHourUv = uvForecast.forecasts.find(f => Temporal.ZonedDateTime.compare(now, Temporal.ZonedDateTime.from(f.time)) <= 0);
+      if (currentHourUv)
+      {
+        uvMessage = `UV ${currentHourUv.uvIndex} / High ${maxUvValue}`;
+      }
+      else
+      {
+        uvMessage = `UV High ${maxUvValue}`;
+      }
+    }
+
+    const scrollItems = (hasCurrentDesc ? 1 : 0) + (forecast.ok ? 1 : 0) + (uvMessage ? 1 : 0);
+    let scrollClass = "weather-description";
+    if (scrollItems == 2)
+    {
+      scrollClass = "weather-description weather-description-scroll-2";
+    }
+    else if (scrollItems == 3)
+    {
+      scrollClass = "weather-description weather-description-scroll-3";
+    }
+
     return (
       <>
         {!hasCurrentDesc ? <></> : <div className="weather-emoji">{getEmoji(current.description)}</div>}
-        <div className={hasCurrentDesc && forecast.ok ? "weather-description weather-description-scroll" : "weatherDesc"}>
+        <div className={scrollClass}>
           {!hasCurrentDesc ? <></> : <div>{getShortDesc(current.description)}</div>}
           {!forecast.ok ? <></> : <div><span className='temperature-high'>{toFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{toFahrenheit(forecast.lowTemperature)}&deg;</span></div>}
+          {!uvMessage ? <></> : <div>{uvMessage}</div> }
         </div>
         {!current.ok ? <div></div> : <div>{toFahrenheit(current.temperature)}&deg;F</div>}
       </>
@@ -304,6 +335,7 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
 function App() {
   const [weather, setWeather] = useState<WeatherConditions>({ ok: false, description: "", temperature: 0 });
   const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0 });
+  const [uvForecast, setUvForecast] = useState<UvForecastDay>({ ok: false, forecasts: [] });
   const [routeNames, setRouteNames] = useState<RouteNames>({ ok: false, routes: [] });
   const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
   const [isFullscreen, setFullscreen] = useState(false);
@@ -438,6 +470,36 @@ function App() {
   }, []);
 
   useEffect(() => {
+    let timeoutId = 0;
+    const paramsString = window.location.search;
+    const searchParams = new URLSearchParams(paramsString);
+    const zipcode = searchParams.get("zip");
+    if (zipcode != null) {
+      const fetchUv = async () => {
+        console.log("Fetching UV...");
+
+        try {
+          const response = await fetch(`/uv?zip=${zipcode}`);
+          const data = await response.json() as UvForecastDay;
+          if (data.ok) {
+            setUvForecast(data);
+            console.log("UV forecast: %s", JSON.stringify(data));
+          }
+        }
+        catch (e) {
+          console.error(e);
+        }
+
+        timeoutId = window.setTimeout(() => fetchUv(), 60 * 60 * 1000);
+      };
+
+      fetchUv();
+    }
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
     const intervalId = window.setInterval(() => {
       if (showMouseCursor) {
         const now = Temporal.Now.instant();
@@ -558,7 +620,7 @@ function App() {
         <button onClick={enterFullscreen}>Enter Fullscreen</button>
       </div>
       <header className={headerClass}>
-        <WeatherDisplay current={weather} forecast={forecast} lat={lat} lon={lon} />
+        <WeatherDisplay current={weather} forecast={forecast} uvForecast={uvForecast} lat={lat} lon={lon} />
       </header>
       <main className={layoutClass}>
         {showBus

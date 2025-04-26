@@ -10,6 +10,12 @@
 	initial-value: 100%;
 }
 
+@property --weather-transition-3 {
+	syntax: "<percentage>";
+	inherits: true;
+	initial-value: 200%;
+}
+
 #root {
 	margin: 0 auto;
 	--route-color: hsl(210, 100%, 75%);
@@ -216,8 +222,12 @@ h1>* {
   	text-overflow: ellipsis;
 }
 
-.weather-description-scroll {
-	animation: 30s linear infinite scroll-in;
+.weather-description-scroll-2 {
+	animation: 30s linear infinite scroll-in-2;
+}
+
+.weather-description-scroll-3 {
+	animation: 45s linear infinite scroll-in-3;
 }
 
 .weather-description>div {
@@ -228,16 +238,19 @@ h1>* {
   	text-overflow: ellipsis;
 }
 
-.weather-description>div:last-child {
-	transform: translateY(var(--weather-transition-2));
-}
-
-/* must go after :last-child in case of one child */
 .weather-description>div:first-child {
 	transform: translateY(var(--weather-transition));
 }
 
-@keyframes scroll-in {
+.weather-description>div:nth-child(2) {
+	transform: translateY(var(--weather-transition-2));
+}
+
+.weather-description>div:nth-child(3) {
+	transform: translateY(var(--weather-transition-3));
+}
+
+@keyframes scroll-in-2 {
 	0%,
 	45% {
 		--weather-transition: 0%;
@@ -263,6 +276,48 @@ h1>* {
 	100% {
 		--weather-transition: 0%;
 		--weather-transition-2: -100%;
+	}
+}
+
+@keyframes scroll-in-3 {
+	0%,
+	30% {
+		--weather-transition: 0%;
+		--weather-transition-2: 100%;
+		--weather-transition-3: 200%;
+	}
+
+	/* scroll second div in 30-33 */
+	33%,
+	64% {
+		--weather-transition: -100%;
+		--weather-transition-2: 0%;
+		--weather-transition-3: 100%;
+	}
+
+	
+	/* scroll second div in 64-67 */
+	67% {
+		--weather-transition: -200%;
+		--weather-transition-2: -100%;
+		--weather-transition-3: 0%;
+		animation-timing-function: step-start;
+	}
+
+	/* swap divs */
+	68%,
+	97% {
+		--weather-transition: 100%;
+		--weather-transition-2: 200%;
+		--weather-transition-3: 0%;
+		animation-timing-function: initial;
+	}
+
+	/* scroll first div in 97-100 */
+	100% {
+		--weather-transition: 0%;
+		--weather-transition-2: 100%;
+		--weather-transition-3: -100%;
 	}
 }
 

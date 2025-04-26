@@ -7,3 +7,5 @@ export type BusTimes = { ok: boolean, stops: { stopId: StopId, routes: { routeId
 export type RouteNames = { ok: boolean, routes: { routeId: RouteId, directions: { directionId: DirectionId, name: string }[] }[] };
 export type WeatherConditions = { ok: boolean, description: string, temperature: number };
 export type WeatherForecast = { ok: boolean, highTemperature: number, lowTemperature: number, chancePrecipitation: number };
+export type UvForecastHour = { uvIndex: number, time: string };
+export type UvForecastDay = { ok: boolean, forecasts: UvForecastHour[] }
