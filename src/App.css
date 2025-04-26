@@ -183,9 +183,10 @@ h1>* {
 }
 
 .has-not-left-terminus:after {
-	content: "\25c6";
-	vertical-align: 90%;
-	font-size: 0.4em;
+	content: "*";
+	vertical-align: text-top;
+	font-size: 0.8em;
+	font-weight: 600;
 	font-variant-ligatures: no-contextual;
 }
 
