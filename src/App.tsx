@@ -20,6 +20,62 @@ function WeatherDisplay({ current, forecast }: { current: WeatherConditions, for
     return Math.round(c * (9.0 / 5.0) + 32.0);
   }
 
+  function getEmoji(text: string) {
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes("snow") || lowerText.includes("blizzard"))
+    {
+      return '❄️';
+    }
+    else if (lowerText.includes("thunderstorm"))
+    {
+      return '⚡';
+    }
+    else if (lowerText.includes("tropical storm") || lowerText.includes("hurricane"))
+    {
+      return '🌀';
+    }
+    else if (lowerText.includes("rain") || lowerText.includes("drizzle") || lowerText.includes("ice") || lowerText.includes("showers"))
+    {
+      return '☔';
+    }
+    else if (lowerText.includes("tornado") || lowerText.includes("dust") || lowerText.includes("sand"))
+    {
+      return '🌪️';
+    }
+    else if (lowerText.includes("mostly cloudy"))
+    {
+      return '🌥️';
+    }
+    else if (lowerText.includes("partly cloudy"))
+    {
+      return '⛅';
+    }
+    else if (lowerText.includes("cloud"))
+    {
+      return '🌤️';
+    }
+    else if (lowerText.includes("windy") || lowerText.includes("breezy"))
+    {
+      return '🍃';
+    }
+    else if (lowerText.includes("overcast") || lowerText.includes("haze") || lowerText.includes("smoke") || lowerText.includes("fog") || lowerText.includes("mist"))
+    {
+      return '🌫️';
+    }
+    else
+    {
+      const now = Temporal.Now.zonedDateTimeISO();
+      if (now.hour >= 6 && now.hour < 18)
+      {
+        return '🌞';
+      }
+      else
+      {
+        return '🌛';
+      }
+    }
+  }
+
   function getShortDesc(text: string) {
     if (text.includes(" and ")) {
       return text.split(" and ")[0];
@@ -37,6 +93,7 @@ function WeatherDisplay({ current, forecast }: { current: WeatherConditions, for
     const hasCurrentDesc = current.ok && !!current.description;
     return (
       <>
+        {!hasCurrentDesc ? <></> : <div className="weather-emoji">{getEmoji(current.description)}</div>}
         <div className={hasCurrentDesc && forecast.ok ? "weather-description weather-description-scroll" : "weatherDesc"}>
           {!hasCurrentDesc ? <></> : <div>{getShortDesc(current.description)}</div>}
           {!forecast.ok ? <></> : <div><span className='temperature-high'>{toFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{toFahrenheit(forecast.lowTemperature)}&deg;</span></div>}
