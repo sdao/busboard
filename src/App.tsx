@@ -87,6 +87,28 @@ function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: 
     return text;
   }
 
+  function getUvDesc()
+  {
+    const maxUvValue = Math.max(...uvForecast.forecasts.map(f => f.uvIndex));
+
+    // Only show UV if it's high today
+    if (maxUvValue >= 3)
+    {
+      const plainNow = now.toPlainDateTime();
+      const currentHourUv = uvForecast.forecasts.find(f => Temporal.PlainDateTime.compare(plainNow, Temporal.PlainDateTime.from(f.time)) <= 0);
+      if (currentHourUv)
+      {
+        return `UV ${currentHourUv.uvIndex} / High ${maxUvValue}`;
+      }
+      else
+      {
+        return `UV High ${maxUvValue}`;
+      }
+    }
+
+    return null;
+  }
+
   if (!current.ok && !forecast.ok && !uvForecast.ok) {
     return (
       <>
@@ -96,21 +118,7 @@ function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: 
   else {
     const hasCurrentDesc = current.ok && !!current.description;
 
-    // Only show UV if it's high today
-    let uvMessage = null;
-    const maxUvValue = Math.max(...uvForecast.forecasts.map(f => f.uvIndex));
-    if (maxUvValue >= 3)
-    {
-      const currentHourUv = uvForecast.forecasts.find(f => Temporal.ZonedDateTime.compare(now, Temporal.ZonedDateTime.from(f.time)) <= 0);
-      if (currentHourUv)
-      {
-        uvMessage = `UV ${currentHourUv.uvIndex} / High ${maxUvValue}`;
-      }
-      else
-      {
-        uvMessage = `UV High ${maxUvValue}`;
-      }
-    }
+    const uvMessage = getUvDesc();
 
     const scrollItems = (hasCurrentDesc ? 1 : 0) + (forecast.ok ? 1 : 0) + (uvMessage ? 1 : 0);
     let scrollClass = "weather-description";

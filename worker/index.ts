@@ -315,7 +315,7 @@ async function getUvForecastDay(zip: string): Promise<UvForecastDay> {
                     const pm = (components[2].toUpperCase() == "PM");
                     const hour24 = pm ? hour12 + 12 : hour12;
 
-                    return Temporal.ZonedDateTime.from({ year, month, day, hour: hour24, timeZone: Temporal.Now.timeZoneId() });
+                    return Temporal.PlainDateTime.from({ year, month, day, hour: hour24 });
                   }
                 }
               }
