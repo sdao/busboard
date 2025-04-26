@@ -5,6 +5,7 @@ import { fromLonLat } from 'ol/proj';
 import ImageLayer from 'ol/layer/Image';
 import ImageWMS from 'ol/source/ImageWMS';
 import { MapboxVectorLayer } from 'ol-mapbox-style';
+import SunCalc from 'suncalc';
 import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, WeatherConditions, WeatherForecast } from "../shared/types";
 import { Temporal } from '@js-temporal/polyfill';
 import 'core-js/actual/url';
@@ -12,7 +13,7 @@ import 'core-js/actual/url-search-params';
 import 'whatwg-fetch'
 import './App.css'
 
-function WeatherDisplay({ current, forecast }: { current: WeatherConditions, forecast: WeatherForecast }) {
+function WeatherDisplay({ current, forecast, lat, lon }: { current: WeatherConditions, forecast: WeatherForecast, lat: number, lon: number }) {
   function toFahrenheit(c: number | null) {
     if (c === null) {
       return c;
@@ -64,8 +65,9 @@ function WeatherDisplay({ current, forecast }: { current: WeatherConditions, for
     }
     else
     {
-      const now = Temporal.Now.zonedDateTimeISO();
-      if (now.hour >= 6 && now.hour < 18)
+      const now = new Date();
+      const times = SunCalc.getTimes(now, lat, lon);
+      if (now > times.sunrise && now < times.sunset)
       {
         return '🌞';
       }
@@ -225,7 +227,7 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { r
 
 import versatiles from './assets/versatiles-eclipse.json?url'
 
-const RadarMapComponent = () => {
+function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const olMapRef = useRef<OLMap>(null);
 
@@ -249,7 +251,7 @@ const RadarMapComponent = () => {
           }),
         ],
         view: new OLView({
-          center: fromLonLat([-97.7501975, 30.2649153]),
+          center: fromLonLat([lon, lat]),
           zoom: 10
         }),
         controls: []
@@ -261,7 +263,7 @@ const RadarMapComponent = () => {
       return () => map.setTarget(undefined);
     }
     return () => { };
-  }, []);
+  }, [lat, lon]);
 
   // Process map div resize
   useEffect(() => {
@@ -521,6 +523,19 @@ function App() {
   const showRadarIfChancePrecipitationGreater = 20;
   const showRadar = forceRadar ?? (forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater);
 
+  const lat = (() => {
+    const paramsString = window.location.search;
+    const searchParams = new URLSearchParams(paramsString);
+    const flag = searchParams.get("lat");
+    return flag ? parseFloat(flag) : null;
+  })() ?? 30.2649153;
+  const lon = (() => {
+    const paramsString = window.location.search;
+    const searchParams = new URLSearchParams(paramsString);
+    const flag = searchParams.get("lon");
+    return flag ? parseFloat(flag) : null;
+  })() ?? -97.7501975;
+
   let layoutClass = "";
   let headerClass = "";
   if (showRadar && showBus)
@@ -543,7 +558,7 @@ function App() {
         <button onClick={enterFullscreen}>Enter Fullscreen</button>
       </div>
       <header className={headerClass}>
-        <WeatherDisplay current={weather} forecast={forecast} />
+        <WeatherDisplay current={weather} forecast={forecast} lat={lat} lon={lon} />
       </header>
       <main className={layoutClass}>
         {showBus
@@ -553,7 +568,7 @@ function App() {
           : <></>}
         {showRadar
           ? <section className='radar'>
-              <article><RadarMapComponent /></article>
+              <article><RadarMapComponent lat={lat} lon={lon} /></article>
             </section>
           : <></>}
       </main>
