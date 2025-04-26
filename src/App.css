@@ -210,6 +210,8 @@ h1>* {
 	--weather-transition: 0%;
 	--weather-transition-2: 100%;
 	overflow: hidden;
+  	white-space: nowrap;
+  	text-overflow: ellipsis;
 }
 
 .weather-description-scroll {
