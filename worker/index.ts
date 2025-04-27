@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import GtfsRealtimeBindings from "gtfs-realtime-bindings";
 import { Temporal } from "@js-temporal/polyfill";
 import { DirectionId, RouteId, StopId, StopInstance, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode } from "../shared/types";
 
@@ -101,7 +102,7 @@ async function getReverseGeocode(lat: number, lon: number, userAgent: string, we
 }
 
 async function getBusTimes(stops: string[]): Promise<BusTimes> {
-  const response = await fetch("https://data.texas.gov/download/mqtr-wwpy/text%2Fplain");
+  const response = await fetch("https://data.texas.gov/download/rmk2-acnw/application%2Foctet-stream");
   const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
   if (!ok) {
@@ -109,10 +110,10 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
   }
   else if (contentType.includes("application/octet-stream")) {
     try {
-      const jsonString = new TextDecoder("utf-8").decode(await response.arrayBuffer());
-      const payload = JSON.parse(jsonString) as unknown;
+      const buffer = await response.arrayBuffer();
+      const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(new Uint8Array(buffer));
 
-      if (typeof payload === "object" && payload !== null && "entity" in payload && Array.isArray(payload.entity)) {
+      {
         const arrivals: Map<StopId, Map<RouteId, Map<DirectionId, StopInstance[]>>> = new Map();
         for (const stopId of stops) {
           arrivals.set(stopId, new Map());
@@ -139,18 +140,16 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
           return arrivalsDirection;
         }
 
-        for (const entity of payload.entity as unknown[]) {
-          if (typeof entity === "object" && entity !== null && "tripUpdate" in entity &&
-              typeof entity.tripUpdate === "object" && entity.tripUpdate !== null && "trip" in entity.tripUpdate && "stopTimeUpdate" in entity.tripUpdate) {
+        for (const entity of feed.entity) {
+          if (entity.tripUpdate !== null && entity.tripUpdate !== undefined) {
             const { trip, stopTimeUpdate } = entity.tripUpdate;
-            if (typeof trip === "object" && trip !== null && "routeId" in trip && "directionId" in trip &&
-                Array.isArray(stopTimeUpdate)) {
+            if (stopTimeUpdate !== null && stopTimeUpdate !== undefined) {
               const { routeId, directionId } = trip;
-              if (typeof routeId === "string" && typeof directionId === "number") {
+              if (routeId !== null && routeId !== undefined && directionId !== null && directionId !== undefined) {
                 let anyStopSequences = false;
                 let hasTerminusStopSequence = false;
-                for (const update of stopTimeUpdate as unknown[]) {
-                  if (typeof update === "object" && update !== null && "stopSequence" in update) {
+                for (const update of stopTimeUpdate) {
+                  if (update.stopSequence !== null && update.stopSequence !== undefined) {
                     anyStopSequences = true;
                     if (update.stopSequence === 1) {
                       hasTerminusStopSequence = true;
@@ -162,15 +161,14 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
                   }
                 }
 
-                for (const update of stopTimeUpdate as unknown[]) {
-                  if (typeof update === "object" && update !== null && "arrival" in update && "stopId" in update && "scheduleRelationship" in update) {
+                for (const update of stopTimeUpdate) {
+                  if (update.arrival !== null && update.arrival !== undefined && update.stopId !== null && update.stopId !== undefined && update.scheduleRelationship !== null && update.scheduleRelationship !== undefined) {
                     const { arrival, stopId, scheduleRelationship } = update;
-                    if (typeof arrival === "object" && arrival !== null && "time" in arrival && typeof arrival.time === "string" &&
-                        typeof stopId === "string" &&
-                        scheduleRelationship === "SCHEDULED") {
+                    if (typeof arrival.time === "number" &&
+                        scheduleRelationship === GtfsRealtimeBindings.transit_realtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SCHEDULED) {
                       const instances = getStopInstancesArray(stopId, routeId, directionId);
                       if (instances !== undefined) {
-                        const time = Temporal.Instant.fromEpochMilliseconds(parseInt(arrival.time) * 1000.0);
+                        const time = Temporal.Instant.fromEpochMilliseconds(arrival.time * 1000.0);
                         instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, time: time.toString() });
                       }
                     }
@@ -203,7 +201,7 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
   return { ok: false, stops: [] };
 }
 
-async function setTransitInfo(lat: number, lon: number): Promise<TransitSystemInfo> {
+async function getTransitInfo(lat: number, lon: number): Promise<TransitSystemInfo> {
   const result: TransitSystemInfo = { ok: false, routes: [], closestStops: [] };
 
   const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
@@ -532,7 +530,7 @@ export default {
       const lat = url.searchParams.get("lat");
       const lon = url.searchParams.get("lon");
       if (lat !== null && lon !== null) {
-        return Response.json(await setTransitInfo(parseFloat(lat), parseFloat(lon)));
+        return Response.json(await getTransitInfo(parseFloat(lat), parseFloat(lon)));
       }
       return new Response(null, { status: 400 });
     }
