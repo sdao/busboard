@@ -270,20 +270,34 @@ async function setTransitInfo(lat: number, lon: number): Promise<TransitSystemIn
           console.info(`${stopIdIndex} ${stopLatIndex} ${stopLonIndex}`);
 
           const maxClosestStops = 2;
-          const closestStops: { stopId: StopId, distance: number }[] = [];
+          const closestStops: { stopId: StopId, angle: number }[] = [];
           for (const line of stopsCsvLines.slice(1)) {
             const fields = line.trim().split(",");
             const stopId = fields[stopIdIndex];
             const stopLat = parseFloat(fields[stopLatIndex]);
             const stopLon = parseFloat(fields[stopLonIndex]);
 
-            const distance = Math.pow(stopLat - lat, 2) + Math.pow(stopLon - lon, 2);
-            const insertIndex = closestStops.findIndex(elem => distance < elem.distance);
+            function rad(degrees: number) {
+              return degrees * (Math.PI / 180);
+            }
+
+            function hav(angle: number) {
+              return (1.0 - Math.cos(angle)) / 2.0;
+            }
+
+            function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
+              const dlat = Math.abs(lat1 - lat2);
+              const dlon = Math.abs(lon1 - lon2);
+              return hav(dlat) + (Math.cos(lat1) * Math.cos(lat2) * hav(dlon));
+            }
+
+            const angle = haversine(rad(lat), rad(lon), rad(stopLat), rad(stopLon));
+            const insertIndex = closestStops.findIndex(elem => angle < elem.angle);
             if (insertIndex == -1 && closestStops.length < maxClosestStops) {
-              closestStops.push({ stopId, distance });
+              closestStops.push({ stopId, angle });
             }
             else if (insertIndex >= 0 && insertIndex < closestStops.length) {
-              closestStops.splice(insertIndex, 0, { stopId, distance });
+              closestStops.splice(insertIndex, 0, { stopId, angle });
               if (closestStops.length > maxClosestStops)
               {
                 closestStops.length = maxClosestStops;
