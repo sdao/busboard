@@ -258,7 +258,6 @@ async function setTransitInfo(lat: number, lon: number): Promise<TransitSystemIn
 
       const stopsFiles = zipPayload.file("stops.txt");
       if (stopsFiles !== null) {
-        console.log("have stops.txt");
         const stopsCsv = await stopsFiles.async("string");
         const stopsCsvLines = stopsCsv.split("\n");
 
@@ -267,7 +266,6 @@ async function setTransitInfo(lat: number, lon: number): Promise<TransitSystemIn
           const stopIdIndex = headerFields.indexOf("stop_id");
           const stopLatIndex = headerFields.indexOf("stop_lat");
           const stopLonIndex = headerFields.indexOf("stop_lon");
-          console.info(`${stopIdIndex} ${stopLatIndex} ${stopLonIndex}`);
 
           const maxClosestStops = 2;
           const closestStops: { stopId: StopId, angle: number }[] = [];
@@ -306,7 +304,6 @@ async function setTransitInfo(lat: number, lon: number): Promise<TransitSystemIn
           }
 
           result.closestStops = closestStops.map(elem => elem.stopId);
-          console.log(`${result.closestStops}`);
         }
 
         result.ok = !!(result.routes && result.closestStops);
