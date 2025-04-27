@@ -4,6 +4,7 @@ import OLView from 'ol/View';
 import { fromLonLat } from 'ol/proj';
 import ImageLayer from 'ol/layer/Image';
 import ImageWMS from 'ol/source/ImageWMS';
+import Attribution from 'ol/control/Attribution';
 import { MapboxVectorLayer } from 'ol-mapbox-style';
 import SunCalc from 'suncalc';
 import { BusTimes, DirectionId, ReverseGeocode, RouteId, TransitSystemInfo, StopInstance, UvForecastDay, WeatherConditions, WeatherForecast } from "../shared/types";
@@ -293,7 +294,7 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
           center: fromLonLat([lon, lat]),
           zoom: 10
         }),
-        controls: []
+        controls: [new Attribution({collapsible: false})]
       });
 
       map.updateSize();
