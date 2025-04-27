@@ -340,8 +340,67 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
   return <div ref={mapDivRef} style={{ width: '100%', minHeight: '400px' }}></div>;
 };
 
+class TimeoutToken {
+  timeoutId: number = 0;
+  isCancelled: boolean = false;
+
+  setTimeout(handler: TimerHandler, timeout: number) {
+    this.timeoutId = window.setTimeout(handler, timeout);
+  }
+
+  clearTimeout() {
+    window.clearTimeout(this.timeoutId);
+    this.timeoutId = 0;
+    this.isCancelled = true;
+  }
+}
+
+function tryUntilSuccessful(timeoutSeconds: number, func: () => Promise<boolean>): TimeoutToken {
+  const token = new TimeoutToken();
+  const doWork = async () => {
+    try {
+      const ok = await func();
+      if (ok) {
+        return true;
+      }
+    }
+    catch (e) {
+      console.error(e);
+    }
+
+    if (!token.isCancelled) {
+      token.setTimeout(doWork, timeoutSeconds * 1000);
+    }
+    return false;
+  };
+
+  doWork();
+  return token;
+}
+
+function tryIndefinitely(defaultTimeoutSeconds: number, func: () => Promise<number | void>): TimeoutToken {
+  const token = new TimeoutToken();
+  const doWork = async() => {
+    let timeoutSeconds = defaultTimeoutSeconds;
+    try {
+      timeoutSeconds = await func() ?? defaultTimeoutSeconds;
+    }
+    catch (e) {
+      console.error(e);
+    }
+
+    if (!token.isCancelled) {
+      token.setTimeout(doWork, timeoutSeconds * 1000);
+    }
+  }
+
+  doWork();
+  return token;
+}
+
 function App() {
-  const [latLon, setLatLon] = useState<{ lat: number, lon: number }>({ lat: 30.2649, lon: -97.7472 });
+  const [lat, setLat] = useState(30.2649);
+  const [lon, setLon] = useState(-97.7472);
   const [zipcode, setZipcode] = useState<string | null>(null);
   const [weatherTile, setWeatherTile] = useState<{ wfo: string, x: number, y: number} | null>(null);
   const [weatherStation, setWeatherStation] = useState<string | null>(null);
@@ -373,224 +432,184 @@ function App() {
 
   // Fetch effects
   useEffect(() => {
-    let timeoutId = 0;
-    const fetchReverseGeocode = async () => {
-      console.log("Fetching reverse geocode...");
+    const token = tryUntilSuccessful(30, async () => {
+        console.log(`Fetching reverse geocode for ${lat}, ${lon}...`);
 
-      try {
-        const response = await fetch(`/geo?lat=${latLon.lat}&lon=${latLon.lon}`);
+        const response = await fetch(`/geo?lat=${lat}&lon=${lon}`);
         if (!response.ok) {
           throw new Error(`<${response.url}> responded with: ${response.status}`);
         }
         
         const data = await response.json() as ReverseGeocode;
-        console.info(`lat=${data.lat}, lon=${data.lon}`);
-        if (data.zip) {
-          console.info(`zipcode=${data.zip}`);
-          setZipcode(data.zip);
+        if (!token.isCancelled) {
+          console.info(`lat=${data.lat}, lon=${data.lon}`);
+          if (data.zip) {
+            console.info(`zipcode=${data.zip}`);
+            setZipcode(data.zip);
+          }
+          if (data.weatherTile) {
+            console.info(`weatherTile=${data.weatherTile.wfo}, ${data.weatherTile.x}, ${data.weatherTile.y}`);
+            setWeatherTile(data.weatherTile);
+          }
+          if (data.weatherStation) {
+            console.info(`weatherStation=${data.weatherStation}`);
+            setWeatherStation(data.weatherStation);
+          }
         }
-        if (data.weatherTile) {
-          console.info(`weatherTile=${data.weatherTile.wfo}, ${data.weatherTile.x}, ${data.weatherTile.y}`);
-          setWeatherTile(data.weatherTile);
-        }
-        if (data.weatherStation) {
-          console.info(`weatherStation=${data.weatherStation}`);
-          setWeatherStation(data.weatherStation);
-        }
-        if (data.ok) {
-          return true;
-        }
-      }
-      catch (e) {
-        console.error(e);
-      }
+        
+        return data.ok;
+    });
 
-      timeoutId = window.setTimeout(() => fetchReverseGeocode(), 30 * 1000);
-      return false;
-    };
-
-    fetchReverseGeocode();
-    return () => window.clearTimeout(timeoutId);
-  }, [latLon]);
+    return () => token.clearTimeout();
+  }, [lat, lon]);
 
   useEffect(() => {
-    let timeoutId = 0;
-    const fetchRouteNames = async () => {
-      console.log("Fetching route names...");
+    const token = tryUntilSuccessful(30, async () => {
+      console.log(`Fetching route names for ${lat}, ${lon}...`);
 
-      try {
-        const response = await fetch(`/transitinfo?lat=${latLon.lat}&lon=${latLon.lon}`);
+      const response = await fetch(`/transitinfo?lat=${lat}&lon=${lon}`);
+      if (!response.ok) {
+        throw new Error(`<${response.url}> responded with: ${response.status}`);
+      }
+      
+      const data = await response.json() as TransitSystemInfo;
+      if (data.ok && !token.isCancelled) {
+        console.info(`Closest stops: ${data.closestStops}`);
+        setTransitInfo(data);
+        return true;
+      }
+
+      return false;
+    });
+
+    return () => token.clearTimeout();
+  }, [lat, lon]);
+
+  useEffect(() => {
+    if (transitInfo.closestStops.length !== 0) {
+      const token = tryIndefinitely(60, async () => {
+        console.log(`Fetching bus times for ${transitInfo.closestStops}...`);
+
+        let nextTimeout = 60;
+
+        const stopIds = transitInfo.closestStops.join(",");
+        const response = await fetch(`/bustimes?stops=${stopIds}`);
         if (!response.ok) {
           throw new Error(`<${response.url}> responded with: ${response.status}`);
         }
         
-        const data = await response.json() as TransitSystemInfo;
-        if (data.ok) {
-          console.info(`Closest stops: ${data.closestStops}`);
-          setTransitInfo(data);
-          return true;
-        }
-      }
-      catch (e) {
-        console.error(e);
-      }
+        const data = await response.json() as BusTimes;
+        if (data.ok && !token.isCancelled) {
+          setBusTimes(data);
 
-      timeoutId = window.setTimeout(() => fetchRouteNames(), 30 * 1000);
-      return false;
-    };
-
-    fetchRouteNames();
-    return () => window.clearTimeout(timeoutId);
-  }, [latLon]);
-
-  useEffect(() => {
-    let timeoutId = 0;
-
-    if (transitInfo.closestStops.length !== 0) {
-      const fetchBusTimes = async () => {
-        console.log("Fetching bus times...");
-
-        let nextTimeout = 60 * 1000;
-        try {
-          const stopIds = transitInfo.closestStops.join(",");
-          const response = await fetch(`/bustimes?stops=${stopIds}`);
-          if (!response.ok) {
-            throw new Error(`<${response.url}> responded with: ${response.status}`);
-          }
-          
-          const data = await response.json() as BusTimes;
-          if (data.ok) {
-            setBusTimes(data);
-
-            // If there are no more scheduled buses for the night, throttle updates to every ten minutes
-            const anyBusesScheduled = () => {
-              for (const stop of data.stops) {
-                for (const route of stop.routes) {
-                  for (const dir of route.directions) {
-                    if (dir.nextInstances.length !== 0) {
-                      return true;
-                    }
+          // If there are no more scheduled buses for the night, throttle updates to every ten minutes
+          const anyBusesScheduled = () => {
+            for (const stop of data.stops) {
+              for (const route of stop.routes) {
+                for (const dir of route.directions) {
+                  if (dir.nextInstances.length !== 0) {
+                    return true;
                   }
                 }
               }
-              return false;
-            };
-
-            if (!anyBusesScheduled()) {
-              nextTimeout = 10 * 60 * 1000;
             }
+            return false;
+          };
+
+          if (!anyBusesScheduled()) {
+            nextTimeout = 10 * 60;
           }
         }
-        catch (e) {
-          console.error(e);
-        }
 
-        timeoutId = window.setTimeout(() => fetchBusTimes(), nextTimeout);
-      };
+        return nextTimeout;
+      });
 
-      fetchBusTimes();
+      return () => token.clearTimeout();
     }
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {};
   }, [transitInfo.closestStops]);
 
   useEffect(() => {
-    let timeoutId = 0;
     const loadCurrent = (weatherStation !== null);
     const loadForecast = (weatherTile !== null);
 
     if (loadCurrent || loadForecast) {
-      const fetchWeather = async () => {
-        console.log("Fetching weather...");
+      const token = tryIndefinitely(15 * 60, async () => {
+        console.log(`Fetching weather for ${weatherStation}, ${JSON.stringify(weatherTile)}...`);
 
         if (loadCurrent) {
-          try {
-            const response = await fetch(`/weather?station=${weatherStation}`);
-            if (!response.ok) {
-              throw new Error(`<${response.url}> responded with: ${response.status}`);
-            }
-
+          const response = await fetch(`/weather?station=${weatherStation}`);
+          if (response.ok) {
             const data = await response.json() as WeatherConditions;
-            if (data.ok) {
-              setWeather(data);
+            if (data.ok && !token.isCancelled) {
               console.log("weather current: %s", JSON.stringify(data));
+              setWeather(data);
             }
           }
-          catch (e) {
-            console.error(e);
+          else {
+            console.error(`<${response.url}> responded with: ${response.status}`);
           }
         }
 
         if (loadForecast) {
-          try {
-            const response = await fetch(`/forecast?wfo=${weatherTile.wfo}&x=${weatherTile.x}&y=${weatherTile.y}`);
-            if (!response.ok) {
-              throw new Error(`<${response.url}> responded with: ${response.status}`);
-            }
-
+          const response = await fetch(`/forecast?wfo=${weatherTile.wfo}&x=${weatherTile.x}&y=${weatherTile.y}`);
+          if (response.ok) {
             const data = await response.json() as WeatherForecast;
-            if (data.ok) {
-              setForecast(data);
+            if (data.ok && !token.isCancelled) {
               console.log("weather forecast: %s", JSON.stringify(data));
+              setForecast(data);
             }
           }
-          catch (e) {
-            console.error(e);
+          else {
+            console.error(`<${response.url}> responded with: ${response.status}`);
           }
         }
+      });
 
-        timeoutId = window.setTimeout(() => fetchWeather(), 15 * 60 * 1000);
-      };
-
-      fetchWeather();
+      return () => token.clearTimeout();
     }
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {};
   }, [weatherStation, weatherTile]);
 
   useEffect(() => {
-    let timeoutId = 0;
     if (zipcode) {
-      const fetchUv = async () => {
-        console.log("Fetching UV...");
+      const token = tryIndefinitely(60 * 60, async () => {
+        console.log(`Fetching UV for ${zipcode}...`);
 
-        try {
-          const response = await fetch(`/uv?zip=${zipcode}`);
-          if (!response.ok) {
-            throw new Error(`<${response.url}> responded with: ${response.status}`);
-          }
-
-          const data = await response.json() as UvForecastDay;
-          if (data.ok) {
-            setUvForecast(data);
-            console.log("UV forecast: %s", JSON.stringify(data));
-          }
-        }
-        catch (e) {
-          console.error(e);
+        const response = await fetch(`/uv?zip=${zipcode}`);
+        if (!response.ok) {
+          throw new Error(`<${response.url}> responded with: ${response.status}`);
         }
 
-        timeoutId = window.setTimeout(() => fetchUv(), 60 * 60 * 1000);
-      };
+        const data = await response.json() as UvForecastDay;
+        if (data.ok && !token.isCancelled) {
+          console.log("UV forecast: %s", JSON.stringify(data));
+          setUvForecast(data);
+        }
+      });
 
-      fetchUv();
+      return () => token.clearTimeout();
     }
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {};
   }, [zipcode]);
 
   // Mousemove/idle effect
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      if (showMouseCursor) {
+    if (showMouseCursor) {
+      const intervalId = window.setInterval(() => {
         const now = Temporal.Now.instant();
         if (now.since(lastMouseMove.current).total("seconds") > 10) {
           setShowMouseCursor(false);
         }
-      }
-    }, 10 * 1000);
+      }, 10 * 1000);
 
-    return () => window.clearInterval(intervalId);
+      return () => window.clearInterval(intervalId);
+    }
+
+    return () => {};
   }, [showMouseCursor]);
 
   // Fullscreen effect
@@ -610,8 +629,7 @@ function App() {
 
   // Wakelock effect
   useEffect(() => {
-    if (isFullscreen)
-    {
+    if (isFullscreen) {
       let wakeLockPromise = null;
       try {
         wakeLockPromise = navigator.wakeLock.request("screen");
@@ -631,7 +649,9 @@ function App() {
   // Geolocation effect
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(position => {
-      setLatLon({ lat: position.coords.latitude, lon: position.coords.longitude });
+      console.log("GEOLCATION SUCCESS!");
+      setLat(position.coords.latitude);
+      setLon(position.coords.longitude);
     });
   }, []);
 
@@ -678,7 +698,7 @@ function App() {
         <button onClick={enterFullscreen}>Enter Fullscreen</button>
       </div>
       <header className={headerClass}>
-        <WeatherDisplay current={weather} forecast={forecast} uvForecast={uvForecast} lat={latLon.lat} lon={latLon.lon} />
+        <WeatherDisplay current={weather} forecast={forecast} uvForecast={uvForecast} lat={lat} lon={lon} />
       </header>
       <main className={layoutClass}>
         {showBus
@@ -688,7 +708,7 @@ function App() {
           : <></>}
         {showRadar
           ? <section className='radar'>
-              <article><RadarMapComponent lat={latLon.lat} lon={latLon.lon} /></article>
+              <article><RadarMapComponent lat={lat} lon={lon} /></article>
             </section>
           : <></>}
       </main>
