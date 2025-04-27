@@ -90,20 +90,28 @@ function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: 
 
   function getUvDesc()
   {
-    const maxUvValue = Math.max(...uvForecast.forecasts.map(f => f.uvIndex));
+    const plainNow = now.toPlainDateTime();
+    const plainToday = plainNow.toPlainDate();
 
-    // Only show UV if it's high today
-    if (maxUvValue >= 3)
-    {
-      const plainNow = now.toPlainDateTime();
-      const currentHourUv = uvForecast.forecasts.find(f => Temporal.PlainDateTime.compare(plainNow, Temporal.PlainDateTime.from(f.time)) <= 0);
-      if (currentHourUv)
-      {
-        return `UV ${currentHourUv.uvIndex} / High ${maxUvValue}`;
+    const forecasts = uvForecast.forecasts.filter(f => Temporal.PlainDateTime.compare(plainToday, Temporal.PlainDate.from(f.time)) >= 0);
+    if (forecasts.length === 0) {
+      return null;
+    }
+
+    const maxUvToday = Math.max(...forecasts.map(f => f.uvIndex));
+    const currentHourIndex = forecasts.findIndex(f => Temporal.PlainDateTime.compare(plainNow, Temporal.PlainDateTime.from(f.time)) <= 0);
+    if (currentHourIndex === -1) {
+      // Not sure what the current UV is; show the high today if it's moderate or stronger
+      if (maxUvToday >= 3) {
+        return `UV High ${maxUvToday}`;
       }
-      else
-      {
-        return `UV High ${maxUvValue}`;
+    }
+    else {
+      // Only show UV if it's moderate now or later in the day
+      const maxUvRestOfDay = Math.max(...forecasts.slice(currentHourIndex).map(f => f.uvIndex));
+      if (maxUvRestOfDay >= 3) {
+        const currentHourUv = forecasts[currentHourIndex];
+        return `UV ${currentHourUv.uvIndex} / High ${maxUvToday}`;
       }
     }
 

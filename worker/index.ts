@@ -480,7 +480,7 @@ async function getUvForecastDay(zip: string): Promise<UvForecastDay> {
                   const year = parseInt(dateComponents[2]);
                   if (month >= 1 && month <= 12)
                   {
-                    const hour12 = parseInt(components[1]);
+                    const hour12 = parseInt(components[1]) % 12;
                     const pm = (components[2].toUpperCase() == "PM");
                     const hour24 = pm ? hour12 + 12 : hour12;
 
