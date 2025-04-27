@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import GtfsRealtimeBindings from "gtfs-realtime-bindings";
 import { Temporal } from "@js-temporal/polyfill";
-import { DirectionId, RouteId, StopId, StopInstance, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode } from "../shared/types";
+import { DirectionId, RouteId, StopId, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode } from "../shared/types";
 
 async function getReverseGeocode(lat: number, lon: number, userAgent: string, weatherApiKey: string): Promise<ReverseGeocode> {
   const result: ReverseGeocode = { ok: false, lat, lon, zip: null, weatherTile: null, weatherStation: null };
@@ -114,12 +114,12 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
       const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(new Uint8Array(buffer));
 
       {
-        const arrivals: Map<StopId, Map<RouteId, Map<DirectionId, StopInstance[]>>> = new Map();
+        const arrivals: Map<StopId, Map<RouteId, Map<DirectionId, { hasLeftTerminus: boolean, seconds: number }[]>>> = new Map();
         for (const stopId of stops) {
           arrivals.set(stopId, new Map());
         }
 
-        function getStopInstancesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): StopInstance[] | undefined {
+        function getStopInstancesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): { hasLeftTerminus: boolean, seconds: number }[] | undefined {
           const arrivalsStop = arrivals.get(stopId);
           if (arrivalsStop === undefined) {
             return undefined;
@@ -168,8 +168,7 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
                         scheduleRelationship === GtfsRealtimeBindings.transit_realtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SCHEDULED) {
                       const instances = getStopInstancesArray(stopId, routeId, directionId);
                       if (instances !== undefined) {
-                        const time = Temporal.Instant.fromEpochMilliseconds(arrival.time * 1000.0);
-                        instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, time: time.toString() });
+                        instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, seconds: arrival.time });
                       }
                     }
                   }
@@ -182,7 +181,7 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
         const niceStops = Array.from(arrivals, ([stopId, routes]) => {
           const niceRoutes = Array.from(routes, ([routeId, directions]) => {
             const niceDirections = Array.from(directions, ([directionId, times]) => {
-              const nextInstances = times.sort((a, b) => Temporal.Instant.compare(a.time, b.time)).slice(0, 5);
+              const nextInstances = times.sort((a, b) => a.seconds - b.seconds).slice(0, 5).map(arrival => ({ hasLeftTerminus: arrival.hasLeftTerminus, time: Temporal.Instant.fromEpochMilliseconds(arrival.seconds * 1000.0).toString() }));
               return { directionId, nextInstances };
             });
             return { routeId, directions: niceDirections };

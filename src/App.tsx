@@ -14,16 +14,14 @@ import 'core-js/actual/url-search-params';
 import 'whatwg-fetch'
 import './App.css'
 
-function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: WeatherConditions, forecast: WeatherForecast, uvForecast: UvForecastDay, lat: number, lon: number }) {
-  const now = Temporal.Now.zonedDateTimeISO();
-
-  function toFahrenheit(c: number | null) {
-    if (c === null) {
-      return c;
-    }
-    return Math.round(c * (9.0 / 5.0) + 32.0);
+function celsiusToFahrenheit(c: number | null) {
+  if (c === null) {
+    return c;
   }
+  return Math.round(c * (9.0 / 5.0) + 32.0);
+}
 
+function WeatherEmoji({ current, lat, lon }: { current: WeatherConditions, lat: number, lon: number }) {
   function getEmoji(text: string) {
     const lowerText = text.toLowerCase();
     if (lowerText.includes("snow") || lowerText.includes("blizzard"))
@@ -68,7 +66,7 @@ function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: 
     }
     else
     {
-      const nowDate = new Date(now.epochMilliseconds);
+      const nowDate = new Date();
       const times = SunCalc.getTimes(nowDate, lat, lon);
       if (nowDate > times.sunrise && nowDate < times.sunset)
       {
@@ -81,6 +79,15 @@ function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: 
     }
   }
 
+  if (current.ok && !!current.description) {
+    return <div className="weather-emoji">{getEmoji(current.description)}</div>;
+  }
+  else {
+    return <></>;
+  }
+}
+
+function WeatherShortDesc({ current }: { current: WeatherConditions }) {
   function getShortDesc(text: string) {
     if (text.includes(" and ")) {
       return text.split(" and ")[0];
@@ -88,8 +95,27 @@ function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: 
     return text;
   }
 
+  if (current.ok && !!current.description) {
+    return <div>{getShortDesc(current.description)}</div>;
+  }
+  else {
+    return <></>;
+  }
+}
+
+function WeatherHighLowTemp({ forecast }: { forecast: WeatherForecast }) {
+  if (forecast.ok) {
+    return <div><span className='temperature-high'>{celsiusToFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{celsiusToFahrenheit(forecast.lowTemperature)}&deg;</span></div>;
+  }
+  else {
+    return <></>;
+  }
+}
+
+function WeatherUvDescription({ uvForecast }: { uvForecast: UvForecastDay }) {
   function getUvDesc()
   {
+    const now = Temporal.Now.zonedDateTimeISO();
     const plainNow = now.toPlainDateTime();
     const plainToday = plainNow.toPlainDate();
 
@@ -118,76 +144,35 @@ function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: 
     return null;
   }
 
-  if (!current.ok && !forecast.ok && !uvForecast.ok) {
-    return (
-      <>
-      </>
-    )
+  const uvDesc = getUvDesc();
+  if (uvDesc) {
+    return <div>{uvDesc}</div>;
   }
   else {
-    const hasCurrentDesc = current.ok && !!current.description;
-
-    const uvMessage = getUvDesc();
-
-    const scrollItems = (hasCurrentDesc ? 1 : 0) + (forecast.ok ? 1 : 0) + (uvMessage ? 1 : 0);
-    let scrollClass = "weather-description";
-    if (scrollItems == 2)
-    {
-      scrollClass = "weather-description weather-description-scroll-2";
-    }
-    else if (scrollItems == 3)
-    {
-      scrollClass = "weather-description weather-description-scroll-3";
-    }
-
-    return (
-      <>
-        {!hasCurrentDesc ? <></> : <div className="weather-emoji">{getEmoji(current.description)}</div>}
-        <div className={scrollClass}>
-          {!hasCurrentDesc ? <></> : <div>{getShortDesc(current.description)}</div>}
-          {!forecast.ok ? <></> : <div><span className='temperature-high'>{toFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{toFahrenheit(forecast.lowTemperature)}&deg;</span></div>}
-          {!uvMessage ? <></> : <div>{uvMessage}</div> }
-        </div>
-        {!current.ok ? <div></div> : <div>{toFahrenheit(current.temperature)}&deg;F</div>}
-      </>
-    )
+    return <></>;
   }
 }
 
-function MinutesDisplay({ hasLeftTerminus, minutes }: { hasLeftTerminus: boolean, minutes: number }) {
-  const classes = ["minutes-until"];
-  if (hasLeftTerminus) {
-    classes.push("has-left-terminus");
-  }
-  else {
-    classes.push("has-not-left-terminus");
-  }
-
-  if (minutes <= 3) {
-    classes.push("imminent");
-  }
-  else if (minutes <= 5) {
-    classes.push("very-soon");
-  }
-  else if (minutes <= 7) {
-    classes.push("soon");
-  }
-
-  return <span className={classes.join(" ")}>{minutes}</span>
+function WeatherDisplay({ current, forecast, uvForecast, lat, lon }: { current: WeatherConditions, forecast: WeatherForecast, uvForecast: UvForecastDay, lat: number, lon: number }) {
+  return (
+    <>
+      <WeatherEmoji current={current} lat={lat} lon={lon} />
+      <div className="weather-description">
+        <WeatherShortDesc current={current} />
+        <WeatherHighLowTemp forecast={forecast} />
+        <WeatherUvDescription uvForecast={uvForecast} />
+      </div>
+      {current.ok ? <div>{celsiusToFahrenheit(current.temperature)}&deg;F</div> : <div></div>}
+    </>
+  );
 }
 
-function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { routeId: RouteId, directionId: DirectionId, nextInstances: StopInstance[], transitInfo: TransitSystemInfo }) {
-  const [, setCount] = useState(0);
+function RouteIdDisplay({ routeId }: { routeId: RouteId }) {
+  const routeClassName = String(routeId).length > 2 ? "route route3" : "route";
+  return <h1 className={routeClassName}><span>{routeId}</span></h1>;
+}
 
-  // Force a re-render every 5 seconds to keep the remaining time up-to-date
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setCount((val) => val + 1);
-    }, 5 * 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
-
+function RouteNameDisplay({ routeId, directionId, transitInfo }: { routeId: RouteId, directionId: DirectionId, transitInfo: TransitSystemInfo }) {
   function abbreviate(n: string)
   {
     // If `n` is all upper-case, convert it to title case
@@ -246,29 +231,55 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { 
     }
   }
 
-  const routeClassName = String(routeId).length > 2 ? "route route3" : "route";
+  return <>{name}</>;
+}
 
-  const now = Temporal.Now.instant();
-  const instances = nextInstances
-    .map((instance) => ({ hasLeftTerminus: instance.hasLeftTerminus, instant: Temporal.Instant.from(instance.time) }))
-    .filter((instance) => Temporal.Instant.compare(instance.instant, now) >= 0)
-    .sort((a, b) => Temporal.Instant.compare(a.instant, b.instant))
-    .slice(0, 2);
+function MinutesDisplay({ hasLeftTerminus, targetTime }: { hasLeftTerminus: boolean, targetTime: Temporal.Instant }) {
+  const [, setCount] = useState(0);
 
-  const countdownDisplays = [];
-  for (let i = 0; i < instances.length; ++i) {
-    if (i !== 0) {
-      countdownDisplays.push(<span key={i * 2}>,&nbsp;</span>);
-    }
-    const minutesUntil = Math.floor(now.until(instances[i].instant).total("minutes"));
-    countdownDisplays.push(<MinutesDisplay key={i * 2 + 1} hasLeftTerminus={instances[i].hasLeftTerminus} minutes={minutesUntil} />);
+  // Force a re-render every 5 seconds to keep the remaining time up-to-date
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCount((val) => val + 1);
+    }, 5 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const classes = ["minutes-until"];
+  if (hasLeftTerminus) {
+    classes.push("has-left-terminus");
+  }
+  else {
+    classes.push("has-not-left-terminus");
   }
 
+  const now = Temporal.Now.instant();
+  const minutes = Math.floor(now.until(targetTime).total("minutes"));
+  if (minutes >= 0) {
+    if (minutes <= 3) {
+      classes.push("imminent");
+    }
+    else if (minutes <= 5) {
+      classes.push("very-soon");
+    }
+    else if (minutes <= 7) {
+      classes.push("soon");
+    }
+
+    return <span className="minutes-display"><span className={classes.join(" ")}>{minutes}</span></span>;
+  }
+  else {
+    return <></>;
+  }
+}
+
+function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { routeId: RouteId, directionId: DirectionId, nextInstances: StopInstance[], transitInfo: TransitSystemInfo }) {
   return (
     <article>
-      <div><h1 className={routeClassName}><span>{routeId}</span></h1></div>
-      <div className="headsign">{name}</div>
-      <div>{countdownDisplays.length == 0 ? <span>&mdash;</span> : countdownDisplays}<div className="subtitle">minutes</div></div>
+      <div><RouteIdDisplay routeId={routeId}/></div>
+      <div className="headsign"><RouteNameDisplay routeId={routeId} directionId={directionId} transitInfo={transitInfo} /></div>
+      <div><div>{nextInstances.map(inst => <MinutesDisplay key={inst.time} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div><div className="subtitle">minutes</div></div>
     </article>
   )
 }
@@ -349,6 +360,34 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
   return <div ref={mapDivRef} style={{ width: '100%', minHeight: '400px' }}></div>;
 };
 
+function AutoHideMouseCursor(props: React.PropsWithChildren) {
+  const [showMouseCursor, setShowMouseCursor] = useState(true);
+  const lastMouseMove = useRef(Temporal.Now.instant());
+  
+  // Mousemove/idle effect
+  useEffect(() => {
+    if (showMouseCursor) {
+      const intervalId = window.setInterval(() => {
+        const now = Temporal.Now.instant();
+        if (now.since(lastMouseMove.current).total("seconds") > 10) {
+          setShowMouseCursor(false);
+        }
+      }, 10 * 1000);
+
+      return () => window.clearInterval(intervalId);
+    }
+
+    return () => {};
+  }, [showMouseCursor]);
+
+  const handleMouseMove = () => {
+    lastMouseMove.current = Temporal.Now.instant();
+    setShowMouseCursor(true);
+  };
+
+  return <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>{props.children}</div>;
+}
+
 class TimeoutToken {
   timeoutId: number = 0;
   isCancelled: boolean = false;
@@ -419,8 +458,6 @@ function App() {
   const [transitInfo, setTransitInfo] = useState<TransitSystemInfo>({ ok: false, routes: [], closestStops: [] });
   const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
   const [isFullscreen, setFullscreen] = useState(false);
-  const [showMouseCursor, setShowMouseCursor] = useState(true);
-  const lastMouseMove = useRef(Temporal.Now.instant());
 
   const paramsString = window.location.search;
   const searchParams = new URLSearchParams(paramsString);
@@ -605,22 +642,6 @@ function App() {
     return () => {};
   }, [zipcode]);
 
-  // Mousemove/idle effect
-  useEffect(() => {
-    if (showMouseCursor) {
-      const intervalId = window.setInterval(() => {
-        const now = Temporal.Now.instant();
-        if (now.since(lastMouseMove.current).total("seconds") > 10) {
-          setShowMouseCursor(false);
-        }
-      }, 10 * 1000);
-
-      return () => window.clearInterval(intervalId);
-    }
-
-    return () => {};
-  }, [showMouseCursor]);
-
   // Fullscreen effect
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -664,15 +685,6 @@ function App() {
     });
   }, []);
 
-  const handleMouseMove = () => {
-    lastMouseMove.current = Temporal.Now.instant();
-    setShowMouseCursor(true);
-  };
-
-  const enterFullscreen = () => {
-    document.body.requestFullscreen();
-  };
-
   const rows = [];
   if (busTimes.ok) {
     for (const stop of busTimes.stops) {
@@ -689,27 +701,15 @@ function App() {
   const showRadarIfChancePrecipitationGreater = 20;
   const showRadar = forceRadar ?? (forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater);
 
-  let layoutClass = "";
-  let headerClass = "";
-  if (showRadar && showBus)
-  {
-    layoutClass = "compressed-layout";
-  }
-  else if (!showRadar && !showBus)
-  {
-    layoutClass = "hidden-layout";
-    headerClass = "hidden-header";
-  }
-
   return (
-    <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>
+    <AutoHideMouseCursor>
       <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
-        <button onClick={enterFullscreen}>Enter Fullscreen</button>
+        <button onClick={() => document.body.requestFullscreen()}>Enter Fullscreen</button>
       </div>
-      <header className={headerClass}>
-        <WeatherDisplay current={weather} forecast={forecast} uvForecast={uvForecast} lat={lat} lon={lon} />
+      <header>
+        {showBus || showRadar ? <WeatherDisplay current={weather} forecast={forecast} uvForecast={uvForecast} lat={lat} lon={lon} /> : <></>}
       </header>
-      <main className={layoutClass}>
+      <main>
         {showBus
           ? <section>
               {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
@@ -721,7 +721,7 @@ function App() {
             </section>
           : <></>}
       </main>
-    </div>
+    </AutoHideMouseCursor>
   )
 }
 

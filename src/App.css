@@ -51,11 +51,6 @@ header {
 	font-size: 1em;
 }
 
-header.hidden-header
-{
-	display: none;
-}
-
 main
 {
 	display: grid;
@@ -63,14 +58,12 @@ main
 	gap: 0.1em 0.1em;
 }
 
-main.compressed-layout
-{
+main:has(> :nth-child(2):last-child) {
 	grid-template-columns: 3fr 2fr;
 	font-size: 0.8em;
 }
 
-main.hidden-layout
-{
+main:empty {
 	display: none;
 }
 
@@ -184,6 +177,16 @@ h1>* {
 	font-size: 0.5em;
 }
 
+/* Only display the first two instances in the list */
+.minutes-display:not(:first-child, :nth-child(2)) {
+	display: none;
+}
+
+/* Show a comma after the first instance but not if it's the only instance */
+.minutes-display:first-child:not(:last-child):after {
+	content: ", ";
+}
+
 .minutes-until {
 	font-weight: 800;
 	font-size: 1.1em;
@@ -224,11 +227,11 @@ h1>* {
   	text-overflow: ellipsis;
 }
 
-.weather-description-scroll-2 {
+.weather-description:has(> :nth-child(2):last-child) {
 	animation: 30s linear infinite scroll-in-2;
 }
 
-.weather-description-scroll-3 {
+.weather-description:has(> :nth-child(3):last-child) {
 	animation: 45s linear infinite scroll-in-3;
 }
 
