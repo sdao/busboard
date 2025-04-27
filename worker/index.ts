@@ -1,6 +1,104 @@
 import JSZip from "jszip";
 import { Temporal } from "@js-temporal/polyfill";
-import { DirectionId, RouteId, StopId, StopInstance, BusTimes, RouteNames, WeatherConditions, WeatherForecast, UvForecastDay } from "../shared/types";
+import { DirectionId, RouteId, StopId, StopInstance, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode } from "../shared/types";
+
+async function getReverseGeocode(lat: number, lon: number, userAgent: string, weatherApiKey: string): Promise<ReverseGeocode> {
+  const result: ReverseGeocode = { ok: false, lat, lon, zip: null, weatherTile: null, weatherStation: null };
+
+  {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
+      headers: {
+        "user-agent": userAgent
+      }
+    });
+    const { ok, headers } = response;
+    const contentType = headers.get("content-type") || "";
+    if (!ok) {
+      console.log(`<${response.url}> responded with: ${response.status}`);
+    }
+    else if (contentType.includes("application/json")) {
+      try {
+        const payload = await response.json();
+        if (typeof payload === "object" && payload !== null &&
+            "address" in payload && typeof payload.address === "object" && payload.address !== null &&
+            "postcode" in payload.address && typeof payload.address.postcode === "string") {
+          result.zip = payload.address.postcode;
+        }
+      }
+      catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
+  let observationStationsUri = null;
+  {
+    const response = await fetch(`https://api.weather.gov/points/${lat},${lon}`, {
+      headers: {
+        "user-agent": weatherApiKey
+      }
+    });
+    const { ok, headers } = response;
+    const contentType = headers.get("content-type") || "";
+    if (!ok) {
+      console.log(`<${response.url}> responded with: ${response.status}`);
+    }
+    else if (contentType.includes("application/geo+json")) {
+      try {
+        const payload = await response.json();
+        if (typeof payload === "object" && payload !== null &&
+            "properties" in payload && typeof payload.properties === "object" && payload.properties !== null &&
+            "gridId" in payload.properties && typeof payload.properties.gridId === "string" &&
+            "gridX" in payload.properties && typeof payload.properties.gridX === "number" &&
+            "gridY" in payload.properties && typeof payload.properties.gridY === "number") {
+          result.weatherTile = { wfo: payload.properties.gridId, x: payload.properties.gridX, y: payload.properties.gridY };
+
+          if ("observationStations" in payload.properties && typeof payload.properties.observationStations === "string")
+          {
+            observationStationsUri = payload.properties.observationStations;
+          }
+        }
+      }
+      catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
+  console.log(`Fetching observation stations from <${observationStationsUri}>...`);
+  if (observationStationsUri) {
+    const response = await fetch(observationStationsUri, {
+      headers: {
+        "user-agent": weatherApiKey
+      }
+    });
+    const { ok, headers } = response;
+    const contentType = headers.get("content-type") || "";
+    if (!ok) {
+      console.log(`<${response.url}> responded with: ${response.status}`);
+    }
+    else if (contentType.includes("application/geo+json")) {
+      try {
+        const payload = await response.json();
+        if (typeof payload === "object" && payload !== null &&
+            "features" in payload && Array.isArray(payload.features) && payload.features.length != 0) {
+          const firstFeature = payload.features[0] as unknown;
+          if (typeof firstFeature === "object" && firstFeature !== null &&
+              "properties" in firstFeature && typeof firstFeature.properties === "object" && firstFeature.properties !== null &&
+              "stationIdentifier" in firstFeature.properties && typeof firstFeature.properties.stationIdentifier === "string") {
+            result.weatherStation = firstFeature.properties.stationIdentifier;
+          }
+        }
+      }
+      catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
+  result.ok = !!(result.zip && result.weatherTile && result.weatherStation);
+  return result;
+}
 
 async function getBusTimes(stops: string[]): Promise<BusTimes> {
   const response = await fetch("https://data.texas.gov/download/mqtr-wwpy/text%2Fplain");
@@ -105,7 +203,9 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
   return { ok: false, stops: [] };
 }
 
-async function getRouteNames(): Promise<RouteNames> {
+async function setTransitInfo(lat: number, lon: number): Promise<TransitSystemInfo> {
+  const result: TransitSystemInfo = { ok: false, routes: [], closestStops: [] };
+
   const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
   const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
@@ -117,6 +217,7 @@ async function getRouteNames(): Promise<RouteNames> {
       const zip = new JSZip();
       const zipData = await response.arrayBuffer();
       const zipPayload = await zip.loadAsync(zipData);
+
       const tripsFile = zipPayload.file("trips.txt");
       if (tripsFile !== null) {
         const tripsCsv = await tripsFile.async("string");
@@ -151,8 +252,50 @@ async function getRouteNames(): Promise<RouteNames> {
             return { routeId, directions: niceDirections };
           });
 
-          return { ok: true, routes: niceRoutes };
+          result.routes = niceRoutes;
         }
+      }
+
+      const stopsFiles = zipPayload.file("stops.txt");
+      if (stopsFiles !== null) {
+        console.log("have stops.txt");
+        const stopsCsv = await stopsFiles.async("string");
+        const stopsCsvLines = stopsCsv.split("\n");
+
+        if (stopsCsvLines.length > 1) {
+          const headerFields = stopsCsvLines[0].trim().split(",");
+          const stopIdIndex = headerFields.indexOf("stop_id");
+          const stopLatIndex = headerFields.indexOf("stop_lat");
+          const stopLonIndex = headerFields.indexOf("stop_lon");
+          console.info(`${stopIdIndex} ${stopLatIndex} ${stopLonIndex}`);
+
+          const maxClosestStops = 2;
+          const closestStops: { stopId: StopId, distance: number }[] = [];
+          for (const line of stopsCsvLines.slice(1)) {
+            const fields = line.trim().split(",");
+            const stopId = fields[stopIdIndex];
+            const stopLat = parseFloat(fields[stopLatIndex]);
+            const stopLon = parseFloat(fields[stopLonIndex]);
+
+            const distance = Math.pow(stopLat - lat, 2) + Math.pow(stopLon - lon, 2);
+            const insertIndex = closestStops.findIndex(elem => distance < elem.distance);
+            if (insertIndex == -1 && closestStops.length < maxClosestStops) {
+              closestStops.push({ stopId, distance });
+            }
+            else if (insertIndex >= 0 && insertIndex < closestStops.length) {
+              closestStops.splice(insertIndex, 0, { stopId, distance });
+              if (closestStops.length > maxClosestStops)
+              {
+                closestStops.length = maxClosestStops;
+              }
+            }
+          }
+
+          result.closestStops = closestStops.map(elem => elem.stopId);
+          console.log(`${result.closestStops}`);
+        }
+
+        result.ok = !!(result.routes && result.closestStops);
       }
     }
     catch (e) {
@@ -160,7 +303,7 @@ async function getRouteNames(): Promise<RouteNames> {
     }
   }
 
-  return { ok: false, routes: [] };
+  return result;
 }
 
 async function getWeatherCurrent(station: string, apiKey: string): Promise<WeatherConditions> {
@@ -359,6 +502,7 @@ async function getUvForecastDay(zip: string): Promise<UvForecastDay> {
 
 interface Env {
   WEATHER_API_KEY: string;
+  OSM_NOMINATIM_USER_AGENT: string;
 }
 
 export default {
@@ -373,8 +517,13 @@ export default {
       }
       return new Response(null, { status: 400 });
     }
-    else if (url.pathname.startsWith("/routenames")) {
-      return Response.json(await getRouteNames());
+    else if (url.pathname.startsWith("/transitinfo")) {
+      const lat = url.searchParams.get("lat");
+      const lon = url.searchParams.get("lon");
+      if (lat !== null && lon !== null) {
+        return Response.json(await setTransitInfo(parseFloat(lat), parseFloat(lon)));
+      }
+      return new Response(null, { status: 400 });
     }
     else if (url.pathname.startsWith("/weather")) {
       const station = url.searchParams.get("station");
@@ -396,6 +545,14 @@ export default {
       const zipcode = url.searchParams.get("zip");
       if (zipcode !== null) {
         return Response.json(await getUvForecastDay(zipcode));
+      }
+      return new Response(null, { status: 400 });
+    }
+    else if (url.pathname.startsWith("/geo")) {
+      const lat = url.searchParams.get("lat");
+      const lon = url.searchParams.get("lon");
+      if (lat !== null && lon !== null) {
+        return Response.json(await getReverseGeocode(parseFloat(lat), parseFloat(lon), env.OSM_NOMINATIM_USER_AGENT, env.WEATHER_API_KEY));
       }
       return new Response(null, { status: 400 });
     }

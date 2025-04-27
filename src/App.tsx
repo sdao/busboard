@@ -6,7 +6,7 @@ import ImageLayer from 'ol/layer/Image';
 import ImageWMS from 'ol/source/ImageWMS';
 import { MapboxVectorLayer } from 'ol-mapbox-style';
 import SunCalc from 'suncalc';
-import { BusTimes, DirectionId, RouteId, RouteNames, StopInstance, UvForecastDay, WeatherConditions, WeatherForecast } from "../shared/types";
+import { BusTimes, DirectionId, ReverseGeocode, RouteId, TransitSystemInfo, StopInstance, UvForecastDay, WeatherConditions, WeatherForecast } from "../shared/types";
 import { Temporal } from '@js-temporal/polyfill';
 import 'core-js/actual/url';
 import 'core-js/actual/url-search-params';
@@ -167,7 +167,7 @@ function MinutesDisplay({ hasLeftTerminus, minutes }: { hasLeftTerminus: boolean
   return <span className={classes.join(" ")}>{minutes}</span>
 }
 
-function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { routeId: RouteId, directionId: DirectionId, nextInstances: StopInstance[], routeNames: RouteNames }) {
+function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { routeId: RouteId, directionId: DirectionId, nextInstances: StopInstance[], transitInfo: TransitSystemInfo }) {
   const [, setCount] = useState(0);
 
   // Force a re-render every 5 seconds to keep the remaining time up-to-date
@@ -229,7 +229,7 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, routeNames }: { r
   }
 
   let name = `Route ${routeId}`;
-  const route = routeNames.routes.find((route) => route.routeId == routeId);
+  const route = transitInfo.routes.find((route) => route.routeId == routeId);
   if (route !== undefined) {
     const dir = route.directions.find((dir) => dir.directionId == directionId);
     if (dir !== undefined) {
@@ -341,14 +341,77 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
 };
 
 function App() {
+  const [latLon, setLatLon] = useState<{ lat: number, lon: number }>({ lat: 30.2649, lon: -97.7472 });
+  const [zipcode, setZipcode] = useState<string | null>(null);
+  const [weatherTile, setWeatherTile] = useState<{ wfo: string, x: number, y: number} | null>(null);
+  const [weatherStation, setWeatherStation] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherConditions>({ ok: false, description: "", temperature: 0 });
   const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0 });
   const [uvForecast, setUvForecast] = useState<UvForecastDay>({ ok: false, forecasts: [] });
-  const [routeNames, setRouteNames] = useState<RouteNames>({ ok: false, routes: [] });
+  const [transitInfo, setTransitInfo] = useState<TransitSystemInfo>({ ok: false, routes: [], closestStops: [] });
   const [busTimes, setBusTimes] = useState<BusTimes>({ ok: false, stops: [] });
   const [isFullscreen, setFullscreen] = useState(false);
   const [showMouseCursor, setShowMouseCursor] = useState(true);
   const lastMouseMove = useRef(Temporal.Now.instant());
+
+  const paramsString = window.location.search;
+  const searchParams = new URLSearchParams(paramsString);
+  const forceBus = (() =>
+  {
+    const flag = searchParams.get("bus");
+    if (flag == "1" || flag?.toLowerCase() === "true") return true;
+    else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
+    else return null;
+  })();
+  const forceRadar = (() =>
+  {
+    const flag = searchParams.get("radar");
+    if (flag == "1" || flag?.toLowerCase() === "true") return true;
+    else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
+    else return null;
+  })();
+
+  // Fetch effects
+  useEffect(() => {
+    let timeoutId = 0;
+    const fetchReverseGeocode = async () => {
+      console.log("Fetching reverse geocode...");
+
+      try {
+        const response = await fetch(`/geo?lat=${latLon.lat}&lon=${latLon.lon}`);
+        if (!response.ok) {
+          throw new Error(`<${response.url}> responded with: ${response.status}`);
+        }
+        
+        const data = await response.json() as ReverseGeocode;
+        console.info(`lat=${data.lat}, lon=${data.lon}`);
+        if (data.zip) {
+          console.info(`zipcode=${data.zip}`);
+          setZipcode(data.zip);
+        }
+        if (data.weatherTile) {
+          console.info(`weatherTile=${data.weatherTile.wfo}, ${data.weatherTile.x}, ${data.weatherTile.y}`);
+          setWeatherTile(data.weatherTile);
+        }
+        if (data.weatherStation) {
+          console.info(`weatherStation=${data.weatherStation}`);
+          setWeatherStation(data.weatherStation);
+        }
+        if (data.ok) {
+          return true;
+        }
+      }
+      catch (e) {
+        console.error(e);
+      }
+
+      timeoutId = window.setTimeout(() => fetchReverseGeocode(), 30 * 1000);
+      return false;
+    };
+
+    fetchReverseGeocode();
+    return () => window.clearTimeout(timeoutId);
+  }, [latLon]);
 
   useEffect(() => {
     let timeoutId = 0;
@@ -356,14 +419,15 @@ function App() {
       console.log("Fetching route names...");
 
       try {
-        const response = await fetch('/routenames');
+        const response = await fetch(`/transitinfo?lat=${latLon.lat}&lon=${latLon.lon}`);
         if (!response.ok) {
           throw new Error(`<${response.url}> responded with: ${response.status}`);
         }
         
-        const data = await response.json() as RouteNames;
+        const data = await response.json() as TransitSystemInfo;
         if (data.ok) {
-          setRouteNames(data);
+          console.info(`Closest stops: ${data.closestStops}`);
+          setTransitInfo(data);
           return true;
         }
       }
@@ -377,20 +441,18 @@ function App() {
 
     fetchRouteNames();
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [latLon]);
 
   useEffect(() => {
     let timeoutId = 0;
-    const paramsString = window.location.search;
-    const searchParams = new URLSearchParams(paramsString);
-    const stopIds = searchParams.get("stopids");
 
-    if (stopIds !== null) {
+    if (transitInfo.closestStops.length !== 0) {
       const fetchBusTimes = async () => {
         console.log("Fetching bus times...");
 
         let nextTimeout = 60 * 1000;
         try {
+          const stopIds = transitInfo.closestStops.join(",");
           const response = await fetch(`/bustimes?stops=${stopIds}`);
           if (!response.ok) {
             throw new Error(`<${response.url}> responded with: ${response.status}`);
@@ -430,19 +492,12 @@ function App() {
     }
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [transitInfo.closestStops]);
 
   useEffect(() => {
     let timeoutId = 0;
-    const paramsString = window.location.search;
-    const searchParams = new URLSearchParams(paramsString);
-    const wstation = searchParams.get("wstation");
-    const wfo = searchParams.get("wfo");
-    const x = searchParams.get("x");
-    const y = searchParams.get("y");
-
-    const loadCurrent = (wstation != null);
-    const loadForecast = (wfo !== null && x !== null && y !== null);
+    const loadCurrent = (weatherStation !== null);
+    const loadForecast = (weatherTile !== null);
 
     if (loadCurrent || loadForecast) {
       const fetchWeather = async () => {
@@ -450,7 +505,7 @@ function App() {
 
         if (loadCurrent) {
           try {
-            const response = await fetch(`/weather?station=${wstation}`);
+            const response = await fetch(`/weather?station=${weatherStation}`);
             if (!response.ok) {
               throw new Error(`<${response.url}> responded with: ${response.status}`);
             }
@@ -468,7 +523,7 @@ function App() {
 
         if (loadForecast) {
           try {
-            const response = await fetch(`/forecast?wfo=${wfo}&x=${x}&y=${y}`);
+            const response = await fetch(`/forecast?wfo=${weatherTile.wfo}&x=${weatherTile.x}&y=${weatherTile.y}`);
             if (!response.ok) {
               throw new Error(`<${response.url}> responded with: ${response.status}`);
             }
@@ -491,14 +546,11 @@ function App() {
     }
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [weatherStation, weatherTile]);
 
   useEffect(() => {
     let timeoutId = 0;
-    const paramsString = window.location.search;
-    const searchParams = new URLSearchParams(paramsString);
-    const zipcode = searchParams.get("zip");
-    if (zipcode != null) {
+    if (zipcode) {
       const fetchUv = async () => {
         console.log("Fetching UV...");
 
@@ -525,8 +577,9 @@ function App() {
     }
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [zipcode]);
 
+  // Mousemove/idle effect
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       if (showMouseCursor) {
@@ -540,6 +593,7 @@ function App() {
     return () => window.clearInterval(intervalId);
   }, [showMouseCursor]);
 
+  // Fullscreen effect
   useEffect(() => {
     const onFullscreenChange = () => {
       if (document.fullscreenElement) {
@@ -554,6 +608,7 @@ function App() {
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
+  // Wakelock effect
   useEffect(() => {
     if (isFullscreen)
     {
@@ -573,58 +628,37 @@ function App() {
     return () => {};
   }, [isFullscreen]);
 
-  const rows = [];
-  if (busTimes.ok && routeNames !== null) {
-    for (const stop of busTimes.stops) {
-      for (const route of stop.routes) {
-        for (const dir of route.directions) {
-          const key = `${stop.stopId}_${route.routeId}_${dir.directionId}`;
-          rows.push(<BusTimeDisplay key={key} routeId={route.routeId} directionId={dir.directionId} nextInstances={dir.nextInstances} routeNames={routeNames} />);
-        }
-      }
-    }
-  }
+  // Geolocation effect
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(position => {
+      setLatLon({ lat: position.coords.latitude, lon: position.coords.longitude });
+    });
+  }, []);
 
   const handleMouseMove = () => {
     lastMouseMove.current = Temporal.Now.instant();
     setShowMouseCursor(true);
   };
 
-  const forceBus = (() =>
-  {
-    const paramsString = window.location.search;
-    const searchParams = new URLSearchParams(paramsString);
-    const flag = searchParams.get("force");
-    if (flag == "1" || flag?.toLowerCase() === "true") return true;
-    else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
-    else return null;
-  })();
-  const showBus = forceBus ?? (rows.length > 0);
+  const enterFullscreen = () => {
+    document.body.requestFullscreen();
+  };
 
-  const forceRadar = (() =>
-  {
-    const paramsString = window.location.search;
-    const searchParams = new URLSearchParams(paramsString);
-    const flag = searchParams.get("radar");
-    if (flag == "1" || flag?.toLowerCase() === "true") return true;
-    else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
-    else return null;
-  })();
+  const rows = [];
+  if (busTimes.ok) {
+    for (const stop of busTimes.stops) {
+      for (const route of stop.routes) {
+        for (const dir of route.directions) {
+          const key = `${stop.stopId}_${route.routeId}_${dir.directionId}`;
+          rows.push(<BusTimeDisplay key={key} routeId={route.routeId} directionId={dir.directionId} nextInstances={dir.nextInstances} transitInfo={transitInfo} />);
+        }
+      }
+    }
+  }
+
+  const showBus = forceBus ?? (rows.length > 0);
   const showRadarIfChancePrecipitationGreater = 20;
   const showRadar = forceRadar ?? (forecast.chancePrecipitation > showRadarIfChancePrecipitationGreater);
-
-  const lat = (() => {
-    const paramsString = window.location.search;
-    const searchParams = new URLSearchParams(paramsString);
-    const flag = searchParams.get("lat");
-    return flag ? parseFloat(flag) : null;
-  })() ?? 30.2649153;
-  const lon = (() => {
-    const paramsString = window.location.search;
-    const searchParams = new URLSearchParams(paramsString);
-    const flag = searchParams.get("lon");
-    return flag ? parseFloat(flag) : null;
-  })() ?? -97.7501975;
 
   let layoutClass = "";
   let headerClass = "";
@@ -638,17 +672,13 @@ function App() {
     headerClass = "hidden-header";
   }
 
-  const enterFullscreen = () => {
-    document.body.requestFullscreen();
-  };
-
   return (
     <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>
       <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
         <button onClick={enterFullscreen}>Enter Fullscreen</button>
       </div>
       <header className={headerClass}>
-        <WeatherDisplay current={weather} forecast={forecast} uvForecast={uvForecast} lat={lat} lon={lon} />
+        <WeatherDisplay current={weather} forecast={forecast} uvForecast={uvForecast} lat={latLon.lat} lon={latLon.lon} />
       </header>
       <main className={layoutClass}>
         {showBus
@@ -658,7 +688,7 @@ function App() {
           : <></>}
         {showRadar
           ? <section className='radar'>
-              <article><RadarMapComponent lat={lat} lon={lon} /></article>
+              <article><RadarMapComponent lat={latLon.lat} lon={latLon.lon} /></article>
             </section>
           : <></>}
       </main>
