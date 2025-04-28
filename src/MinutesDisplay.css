@@ -1,0 +1,36 @@
+/* Only display the first two instances in the list */
+.minutes-display:not(:first-child, :nth-child(2)) {
+	display: none;
+}
+
+/* Show a comma after the first instance but not if it's the only instance */
+.minutes-display:first-child:not(:last-child):after {
+	content: ", ";
+}
+
+.minutes-until {
+	font-weight: 800;
+	font-size: 1.1em;
+	font-variant-numeric: tabular-nums;
+}
+
+.has-not-left-terminus:after {
+	content: "*";
+	vertical-align: text-top;
+	font-size: 0.8em;
+	font-weight: 600;
+	letter-spacing: -0.1em;
+	font-variant-ligatures: no-contextual;
+}
+
+.imminent {
+	color: var(--urgent-color);
+}
+
+.very-soon {
+	color: var(--warning-color);
+}
+
+.soon {
+	color: var(--info-color);
+}

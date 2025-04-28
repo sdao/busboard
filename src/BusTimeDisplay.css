@@ -1,0 +1,11 @@
+.bustime-headsign {
+	color: var(--route-color);
+}
+
+.bustime-subtitle {
+	font-size: 0.5em;
+}
+
+.bustime-minutes-display-list:empty::after {
+	content: "\2014";
+}

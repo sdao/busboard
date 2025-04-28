@@ -1,0 +1,127 @@
+@property --weather-transition {
+	syntax: "<percentage>";
+	inherits: true;
+	initial-value: 0%;
+}
+
+@property --weather-transition-2 {
+	syntax: "<percentage>";
+	inherits: true;
+	initial-value: 100%;
+}
+
+@property --weather-transition-3 {
+	syntax: "<percentage>";
+	inherits: true;
+	initial-value: 200%;
+}
+
+.weather-description {
+	display: grid;
+	--weather-transition: 0%;
+	--weather-transition-2: 100%;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.weather-description:has(> :nth-child(2):last-child) {
+	animation: 30s linear infinite scroll-in-2;
+}
+
+.weather-description:has(> :nth-child(3):last-child) {
+	animation: 45s linear infinite scroll-in-3;
+}
+
+.weather-description>div {
+	grid-row: 1;
+	grid-column: 1;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.weather-description>div:first-child {
+	transform: translateY(var(--weather-transition));
+}
+
+.weather-description>div:nth-child(2) {
+	transform: translateY(var(--weather-transition-2));
+}
+
+.weather-description>div:nth-child(3) {
+	transform: translateY(var(--weather-transition-3));
+}
+
+@keyframes scroll-in-2 {
+
+	0%,
+	45% {
+		--weather-transition: 0%;
+		--weather-transition-2: 100%;
+	}
+
+	/* scroll second div in 45-50 */
+	50% {
+		--weather-transition: -100%;
+		--weather-transition-2: 0%;
+		animation-timing-function: step-start;
+	}
+
+	/* swap divs */
+	51%,
+	95% {
+		--weather-transition: 100%;
+		--weather-transition-2: 0%;
+		animation-timing-function: initial;
+	}
+
+	/* scroll first div in 95-100 */
+	100% {
+		--weather-transition: 0%;
+		--weather-transition-2: -100%;
+	}
+}
+
+@keyframes scroll-in-3 {
+
+	0%,
+	30% {
+		--weather-transition: 0%;
+		--weather-transition-2: 100%;
+		--weather-transition-3: 200%;
+	}
+
+	/* scroll second div in 30-33 */
+	33%,
+	64% {
+		--weather-transition: -100%;
+		--weather-transition-2: 0%;
+		--weather-transition-3: 100%;
+	}
+
+
+	/* scroll second div in 64-67 */
+	67% {
+		--weather-transition: -200%;
+		--weather-transition-2: -100%;
+		--weather-transition-3: 0%;
+		animation-timing-function: step-start;
+	}
+
+	/* swap divs */
+	68%,
+	97% {
+		--weather-transition: 100%;
+		--weather-transition-2: 200%;
+		--weather-transition-3: 0%;
+		animation-timing-function: initial;
+	}
+
+	/* scroll first div in 97-100 */
+	100% {
+		--weather-transition: 0%;
+		--weather-transition-2: 100%;
+		--weather-transition-3: -100%;
+	}
+}

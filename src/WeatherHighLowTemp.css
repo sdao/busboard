@@ -1,0 +1,7 @@
+.temperature-high {
+	color: hsl(30, 80%, 70%);
+}
+
+.temperature-low {
+	color: hsl(220, 80%, 70%);
+}
