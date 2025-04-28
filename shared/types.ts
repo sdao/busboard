@@ -2,8 +2,11 @@ export type RouteId = string;
 export type StopId = string;
 export type DirectionId = number;
 
-export type StopInstance = { hasLeftTerminus: boolean, time: string };
-export type BusTimes = { ok: boolean, stops: { stopId: StopId, routes: { routeId: RouteId, directions: { directionId: DirectionId, nextInstances: StopInstance[] }[] }[] }[] };
+export type BusInstance = { hasLeftTerminus: boolean, time: string };
+export type DirectionInstance =  { directionId: DirectionId, nextInstances: BusInstance[] };
+export type RouteInstance = { routeId: RouteId, directions: DirectionInstance[] };
+export type StopInstance = { stopId: StopId, routes: RouteInstance[] };
+export type BusTimes = { ok: boolean, stops: StopInstance[] };
 export type TransitSystemInfo = { ok: boolean, routes: { routeId: RouteId, directions: { directionId: DirectionId, name: string }[] }[], closestStops: StopId[] };
 export type WeatherConditions = { ok: boolean, description: string, temperature: number };
 export type WeatherForecast = { ok: boolean, highTemperature: number, lowTemperature: number, chancePrecipitation: number };

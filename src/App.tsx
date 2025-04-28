@@ -7,7 +7,7 @@ import ImageWMS from 'ol/source/ImageWMS';
 import Attribution from 'ol/control/Attribution';
 import { MapboxVectorLayer } from 'ol-mapbox-style';
 import SunCalc from 'suncalc';
-import { BusTimes, DirectionId, ReverseGeocode, RouteId, TransitSystemInfo, StopInstance, UvForecastDay, WeatherConditions, WeatherForecast } from "../shared/types";
+import { BusTimes, DirectionId, ReverseGeocode, RouteId, TransitSystemInfo, BusInstance, UvForecastDay, WeatherConditions, WeatherForecast } from "../shared/types";
 import { Temporal } from '@js-temporal/polyfill';
 import 'core-js/actual/url';
 import 'core-js/actual/url-search-params';
@@ -24,56 +24,43 @@ function celsiusToFahrenheit(c: number | null) {
 function WeatherEmoji({ current, lat, lon }: { current: WeatherConditions, lat: number, lon: number }) {
   function getEmoji(text: string) {
     const lowerText = text.toLowerCase();
-    if (lowerText.includes("snow") || lowerText.includes("blizzard"))
-    {
+    if (lowerText.includes("snow") || lowerText.includes("blizzard")) {
       return '❄️';
     }
-    else if (lowerText.includes("thunderstorm"))
-    {
+    else if (lowerText.includes("thunderstorm")) {
       return '⚡';
     }
-    else if (lowerText.includes("tropical storm") || lowerText.includes("hurricane"))
-    {
+    else if (lowerText.includes("tropical storm") || lowerText.includes("hurricane")) {
       return '🌀';
     }
-    else if (lowerText.includes("rain") || lowerText.includes("drizzle") || lowerText.includes("ice") || lowerText.includes("showers"))
-    {
+    else if (lowerText.includes("rain") || lowerText.includes("drizzle") || lowerText.includes("ice") || lowerText.includes("showers")) {
       return '☔';
     }
-    else if (lowerText.includes("tornado") || lowerText.includes("dust") || lowerText.includes("sand"))
-    {
+    else if (lowerText.includes("tornado") || lowerText.includes("dust") || lowerText.includes("sand")) {
       return '🌪️';
     }
-    else if (lowerText.includes("mostly cloudy"))
-    {
+    else if (lowerText.includes("mostly cloudy")) {
       return '🌥️';
     }
-    else if (lowerText.includes("partly cloudy"))
-    {
+    else if (lowerText.includes("partly cloudy")) {
       return '⛅';
     }
-    else if (lowerText.includes("cloud"))
-    {
+    else if (lowerText.includes("cloud")) {
       return '🌤️';
     }
-    else if (lowerText.includes("windy") || lowerText.includes("breezy"))
-    {
+    else if (lowerText.includes("windy") || lowerText.includes("breezy")) {
       return '🍃';
     }
-    else if (lowerText.includes("overcast") || lowerText.includes("haze") || lowerText.includes("smoke") || lowerText.includes("fog") || lowerText.includes("mist"))
-    {
+    else if (lowerText.includes("overcast") || lowerText.includes("haze") || lowerText.includes("smoke") || lowerText.includes("fog") || lowerText.includes("mist")) {
       return '🌫️';
     }
-    else
-    {
+    else {
       const nowDate = new Date();
       const times = SunCalc.getTimes(nowDate, lat, lon);
-      if (nowDate > times.sunrise && nowDate < times.sunset)
-      {
+      if (nowDate > times.sunrise && nowDate < times.sunset) {
         return '🌞';
       }
-      else
-      {
+      else {
         return '🌛';
       }
     }
@@ -113,8 +100,7 @@ function WeatherHighLowTemp({ forecast }: { forecast: WeatherForecast }) {
 }
 
 function WeatherUvDescription({ uvForecast }: { uvForecast: UvForecastDay }) {
-  function getUvDesc()
-  {
+  function getUvDesc() {
     const now = Temporal.Now.zonedDateTimeISO();
     const plainNow = now.toPlainDateTime();
     const plainToday = plainNow.toPlainDate();
@@ -173,11 +159,9 @@ function RouteIdDisplay({ routeId }: { routeId: RouteId }) {
 }
 
 function RouteNameDisplay({ routeId, directionId, transitInfo }: { routeId: RouteId, directionId: DirectionId, transitInfo: TransitSystemInfo }) {
-  function abbreviate(n: string)
-  {
+  function abbreviate(n: string) {
     // If `n` is all upper-case, convert it to title case
-    if (n.toUpperCase() === n)
-    {
+    if (n.toUpperCase() === n) {
       const wordRegex = /\b\w+\b/g;
       const matches = n.matchAll(wordRegex);
 
@@ -186,20 +170,17 @@ function RouteNameDisplay({ routeId, directionId, transitInfo }: { routeId: Rout
         const start = match.index;
         const end = start + match[0].length;
 
-        for (let i = titleCase.length; i < start; ++i)
-        {
+        for (let i = titleCase.length; i < start; ++i) {
           titleCase += n[i];
         }
 
         titleCase += n[start].toUpperCase();
-        for (let i = start + 1; i < end; ++i)
-        {
+        for (let i = start + 1; i < end; ++i) {
           titleCase += n[i].toLowerCase();
         }
       }
-      
-      for (let i = titleCase.length; i < n.length; ++i)
-      {
+
+      for (let i = titleCase.length; i < n.length; ++i) {
         titleCase += n[i];
       }
 
@@ -208,18 +189,18 @@ function RouteNameDisplay({ routeId, directionId, transitInfo }: { routeId: Rout
 
     // Abbreviate some common words
     return n.replace(/\bAvenue\b/ig, "Av")
-            .replace(/\bBoulevard\b/ig, "Blvd")
-            .replace(/\bCenter\b/ig, "Ctr")
-            .replace(/\bPark.+Ride\b/ig, "P+R")
-            .replace(/\bParkway\b/ig, "Pkwy")
-            .replace(/\bPlace\b/ig, "Pl")
-            .replace(/\bPlaza\b/ig, "Plz")
-            .replace(/\bRoad\b/ig, "Rd")
-            .replace(/\bSquare\b/ig, "Sq")
-            .replace(/\bStation\b/ig, "Sta")
-            .replace(/\bStreet\b/ig, "St")
-            .replace(/\bUniversity\b/ig, "Univ")
-            ;
+      .replace(/\bBoulevard\b/ig, "Blvd")
+      .replace(/\bCenter\b/ig, "Ctr")
+      .replace(/\bPark.+Ride\b/ig, "P+R")
+      .replace(/\bParkway\b/ig, "Pkwy")
+      .replace(/\bPlace\b/ig, "Pl")
+      .replace(/\bPlaza\b/ig, "Plz")
+      .replace(/\bRoad\b/ig, "Rd")
+      .replace(/\bSquare\b/ig, "Sq")
+      .replace(/\bStation\b/ig, "Sta")
+      .replace(/\bStreet\b/ig, "St")
+      .replace(/\bUniversity\b/ig, "Univ")
+      ;
   }
 
   let name = `Route ${routeId}`;
@@ -274,10 +255,10 @@ function MinutesDisplay({ hasLeftTerminus, targetTime }: { hasLeftTerminus: bool
   }
 }
 
-function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { routeId: RouteId, directionId: DirectionId, nextInstances: StopInstance[], transitInfo: TransitSystemInfo }) {
+function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { routeId: RouteId, directionId: DirectionId, nextInstances: BusInstance[], transitInfo: TransitSystemInfo }) {
   return (
     <article>
-      <div><RouteIdDisplay routeId={routeId}/></div>
+      <div><RouteIdDisplay routeId={routeId} /></div>
       <div className="headsign"><RouteNameDisplay routeId={routeId} directionId={directionId} transitInfo={transitInfo} /></div>
       <div><div>{nextInstances.map(inst => <MinutesDisplay key={inst.time} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div><div className="subtitle">minutes</div></div>
     </article>
@@ -286,7 +267,7 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { 
 
 import versatiles from './assets/versatiles-eclipse.json?url'
 
-function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
+function RadarMapComponent({ lat, lon }: { lat: number, lon: number }) {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const olMapRef = useRef<OLMap>(null);
 
@@ -312,7 +293,7 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
         view: new OLView({
           zoom: 10
         }),
-        controls: [new Attribution({collapsible: false})]
+        controls: [new Attribution({ collapsible: false })]
       });
 
       map.updateSize();
@@ -352,10 +333,9 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
 
   // Periodically refresh map
   useEffect(() => {
-    const intervalId = window.setInterval(() => {      
+    const intervalId = window.setInterval(() => {
       const currentMap = olMapRef.current;
-      if (currentMap)
-      {
+      if (currentMap) {
         currentMap.getAllLayers().forEach((layer) => {
           layer.getSource()?.refresh();
         });
@@ -371,7 +351,7 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
 function AutoHideMouseCursor(props: React.PropsWithChildren) {
   const [showMouseCursor, setShowMouseCursor] = useState(true);
   const lastMouseMove = useRef(Temporal.Now.instant());
-  
+
   // Mousemove/idle effect
   useEffect(() => {
     if (showMouseCursor) {
@@ -385,7 +365,7 @@ function AutoHideMouseCursor(props: React.PropsWithChildren) {
       return () => window.clearInterval(intervalId);
     }
 
-    return () => {};
+    return () => { };
   }, [showMouseCursor]);
 
   const handleMouseMove = () => {
@@ -436,7 +416,7 @@ function tryUntilSuccessful(timeoutSeconds: number, func: () => Promise<boolean>
 
 function tryIndefinitely(defaultTimeoutSeconds: number, func: () => Promise<number | void>): TimeoutToken {
   const token = new TimeoutToken();
-  const doWork = async() => {
+  const doWork = async () => {
     let timeoutSeconds = defaultTimeoutSeconds;
     try {
       timeoutSeconds = await func() ?? defaultTimeoutSeconds;
@@ -458,7 +438,7 @@ function App() {
   const [lat, setLat] = useState(30.2649);
   const [lon, setLon] = useState(-97.7472);
   const [zipcode, setZipcode] = useState<string | null>(null);
-  const [weatherTile, setWeatherTile] = useState<{ wfo: string, x: number, y: number} | null>(null);
+  const [weatherTile, setWeatherTile] = useState<{ wfo: string, x: number, y: number } | null>(null);
   const [weatherStation, setWeatherStation] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherConditions>({ ok: false, description: "", temperature: 0 });
   const [forecast, setForecast] = useState<WeatherForecast>({ ok: false, highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0 });
@@ -469,15 +449,13 @@ function App() {
 
   const paramsString = window.location.search;
   const searchParams = new URLSearchParams(paramsString);
-  const forceBus = (() =>
-  {
+  const forceBus = (() => {
     const flag = searchParams.get("bus");
     if (flag == "1" || flag?.toLowerCase() === "true") return true;
     else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
     else return null;
   })();
-  const forceRadar = (() =>
-  {
+  const forceRadar = (() => {
     const flag = searchParams.get("radar");
     if (flag == "1" || flag?.toLowerCase() === "true") return true;
     else if (flag == "0" || flag?.toLocaleLowerCase() == "false") return false;
@@ -487,31 +465,31 @@ function App() {
   // Fetch effects
   useEffect(() => {
     const token = tryUntilSuccessful(30, async () => {
-        console.log(`Fetching reverse geocode for ${lat}, ${lon}...`);
+      console.log(`Fetching reverse geocode for ${lat}, ${lon}...`);
 
-        const response = await fetch(`/geo?lat=${lat}&lon=${lon}`);
-        if (!response.ok) {
-          throw new Error(`<${response.url}> responded with: ${response.status}`);
+      const response = await fetch(`/geo?lat=${lat}&lon=${lon}`);
+      if (!response.ok) {
+        throw new Error(`<${response.url}> responded with: ${response.status}`);
+      }
+
+      const data = await response.json() as ReverseGeocode;
+      if (!token.isCancelled) {
+        console.info(`lat=${data.lat}, lon=${data.lon}`);
+        if (data.zip) {
+          console.info(`zipcode=${data.zip}`);
+          setZipcode(data.zip);
         }
-        
-        const data = await response.json() as ReverseGeocode;
-        if (!token.isCancelled) {
-          console.info(`lat=${data.lat}, lon=${data.lon}`);
-          if (data.zip) {
-            console.info(`zipcode=${data.zip}`);
-            setZipcode(data.zip);
-          }
-          if (data.weatherTile) {
-            console.info(`weatherTile=${data.weatherTile.wfo}, ${data.weatherTile.x}, ${data.weatherTile.y}`);
-            setWeatherTile(data.weatherTile);
-          }
-          if (data.weatherStation) {
-            console.info(`weatherStation=${data.weatherStation}`);
-            setWeatherStation(data.weatherStation);
-          }
+        if (data.weatherTile) {
+          console.info(`weatherTile=${data.weatherTile.wfo}, ${data.weatherTile.x}, ${data.weatherTile.y}`);
+          setWeatherTile(data.weatherTile);
         }
-        
-        return data.ok;
+        if (data.weatherStation) {
+          console.info(`weatherStation=${data.weatherStation}`);
+          setWeatherStation(data.weatherStation);
+        }
+      }
+
+      return data.ok;
     });
 
     return () => token.clearTimeout();
@@ -525,7 +503,7 @@ function App() {
       if (!response.ok) {
         throw new Error(`<${response.url}> responded with: ${response.status}`);
       }
-      
+
       const data = await response.json() as TransitSystemInfo;
       if (data.ok && !token.isCancelled) {
         console.info(`Closest stops: ${data.closestStops}`);
@@ -551,7 +529,7 @@ function App() {
         if (!response.ok) {
           throw new Error(`<${response.url}> responded with: ${response.status}`);
         }
-        
+
         const data = await response.json() as BusTimes;
         if (data.ok && !token.isCancelled) {
           setBusTimes(data);
@@ -581,7 +559,7 @@ function App() {
       return () => token.clearTimeout();
     }
 
-    return () => {};
+    return () => { };
   }, [transitInfo.closestStops]);
 
   useEffect(() => {
@@ -624,7 +602,7 @@ function App() {
       return () => token.clearTimeout();
     }
 
-    return () => {};
+    return () => { };
   }, [weatherStation, weatherTile]);
 
   useEffect(() => {
@@ -647,7 +625,7 @@ function App() {
       return () => token.clearTimeout();
     }
 
-    return () => {};
+    return () => { };
   }, [zipcode]);
 
   // Fullscreen effect
@@ -660,7 +638,7 @@ function App() {
         setFullscreen(false);
       }
     };
-          
+
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
@@ -675,13 +653,12 @@ function App() {
         console.error(e);
       }
 
-      if (wakeLockPromise !== null)
-      {
+      if (wakeLockPromise !== null) {
         return () => wakeLockPromise.then(wakeLock => wakeLock.release(), reason => console.error(reason));
       }
     }
 
-    return () => {};
+    return () => { };
   }, [isFullscreen]);
 
   // Geolocation effect
@@ -720,13 +697,13 @@ function App() {
       <main>
         {showBus
           ? <section>
-              {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
-            </section>
+            {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
+          </section>
           : <></>}
         {showRadar
           ? <section className='radar'>
-              <article><RadarMapComponent lat={lat} lon={lon} /></article>
-            </section>
+            <article><RadarMapComponent lat={lat} lon={lon} /></article>
+          </section>
           : <></>}
       </main>
     </AutoHideMouseCursor>
