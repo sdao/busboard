@@ -59,8 +59,8 @@ main
 }
 
 main:has(> :nth-child(2):last-child) {
-	grid-template-columns: 3fr 2fr;
-	font-size: 0.8em;
+	grid-template-columns: 2fr 1fr;
+	font-size: 0.7em;
 }
 
 main:empty {

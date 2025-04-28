@@ -310,7 +310,6 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
           }),
         ],
         view: new OLView({
-          center: fromLonLat([lon, lat]),
           zoom: 10
         }),
         controls: [new Attribution({collapsible: false})]
@@ -321,7 +320,16 @@ function RadarMapComponent({ lat, lon } : { lat: number, lon: number }) {
       olMapRef.current = map;
       return () => map.setTarget(undefined);
     }
+
     return () => { };
+  }, []);
+
+  // Re-center map
+  useEffect(() => {
+    const currentMap = olMapRef.current;
+    if (currentMap) {
+      currentMap.getView().setCenter(fromLonLat([lon, lat]));
+    }
   }, [lat, lon]);
 
   // Process map div resize

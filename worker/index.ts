@@ -390,17 +390,17 @@ async function getWeatherForecast(wfo: string, x: number, y: number, apiKey: str
 
           const findBestValue = (values: unknown[]) =>
           {
-            const now = Temporal.Now.instant();
+            const now = Temporal.Now.zonedDateTimeISO("UTC");
             for (const entry of values) {
               if (typeof entry === "object" && entry !== null && "validTime" in entry && "value" in entry)
               {
                 const { validTime, value } = entry;
                 if (typeof validTime === "string" && typeof value === "number") {
                   const [timeString, durationString] = validTime.split("/");
-                  const time = Temporal.Instant.from(timeString);
+                  const time = Temporal.Instant.from(timeString).toZonedDateTimeISO("UTC");
                   const duration = Temporal.Duration.from(durationString);
                   const endTime = time.add(duration);
-                  if (Temporal.Instant.compare(now, endTime) <= 0) {
+                  if (Temporal.ZonedDateTime.compare(now, endTime) <= 0) {
                     return value;
                   }
                 }
