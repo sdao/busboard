@@ -1,5 +1,4 @@
 import JSZip from "jszip";
-import GtfsRealtimeBindings from "gtfs-realtime-bindings";
 import { Temporal } from "@js-temporal/polyfill";
 import { DirectionId, RouteId, StopId, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, BusInstance, StopInstance, RouteInstance, DirectionInstance } from "../shared/types";
 
@@ -101,7 +100,7 @@ async function getReverseGeocode(lat: number, lon: number, userAgent: string, we
 }
 
 async function getBusTimes(stops: string[]): Promise<BusTimes> {
-  const response = await fetch("https://data.texas.gov/download/rmk2-acnw/application%2Foctet-stream");
+  const response = await fetch("https://data.texas.gov/download/mqtr-wwpy/text%2Fplain");
   const { ok, headers } = response;
   const contentType = headers.get("content-type") || "";
   if (!ok) {
@@ -109,10 +108,10 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
   }
   else if (contentType.includes("application/octet-stream")) {
     try {
-      const buffer = await response.arrayBuffer();
-      const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(new Uint8Array(buffer));
+      const jsonString = new TextDecoder("utf-8").decode(await response.arrayBuffer());
+      const payload = JSON.parse(jsonString) as unknown;
 
-      {
+      if (typeof payload === "object" && payload !== null && "entity" in payload && Array.isArray(payload.entity)) {
         const arrivals: Map<StopId, Map<RouteId, Map<DirectionId, { hasLeftTerminus: boolean, seconds: number }[]>>> = new Map();
         for (const stopId of stops) {
           arrivals.set(stopId, new Map());
@@ -139,16 +138,18 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
           return arrivalsDirection;
         }
 
-        for (const entity of feed.entity) {
-          if (entity.tripUpdate !== null && entity.tripUpdate !== undefined) {
+        for (const entity of payload.entity as unknown[]) {
+          if (typeof entity === "object" && entity !== null && "tripUpdate" in entity &&
+            typeof entity.tripUpdate === "object" && entity.tripUpdate !== null && "trip" in entity.tripUpdate && "stopTimeUpdate" in entity.tripUpdate) {
             const { trip, stopTimeUpdate } = entity.tripUpdate;
-            if (stopTimeUpdate !== null && stopTimeUpdate !== undefined) {
+            if (typeof trip === "object" && trip !== null && "routeId" in trip && "directionId" in trip &&
+              Array.isArray(stopTimeUpdate)) {
               const { routeId, directionId } = trip;
-              if (routeId !== null && routeId !== undefined && directionId !== null && directionId !== undefined) {
+              if (typeof routeId === "string" && typeof directionId === "number") {
                 let anyStopSequences = false;
                 let hasTerminusStopSequence = false;
-                for (const update of stopTimeUpdate) {
-                  if (update.stopSequence !== null && update.stopSequence !== undefined) {
+                for (const update of stopTimeUpdate as unknown[]) {
+                  if (typeof update === "object" && update !== null && "stopSequence" in update) {
                     anyStopSequences = true;
                     if (update.stopSequence === 1) {
                       hasTerminusStopSequence = true;
@@ -160,14 +161,15 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
                   }
                 }
 
-                for (const update of stopTimeUpdate) {
-                  if (update.arrival !== null && update.arrival !== undefined && update.stopId !== null && update.stopId !== undefined && update.scheduleRelationship !== null && update.scheduleRelationship !== undefined) {
+                for (const update of stopTimeUpdate as unknown[]) {
+                  if (typeof update === "object" && update !== null && "arrival" in update && "stopId" in update && "scheduleRelationship" in update) {
                     const { arrival, stopId, scheduleRelationship } = update;
-                    if (typeof arrival.time === "number" &&
-                      scheduleRelationship === GtfsRealtimeBindings.transit_realtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SCHEDULED) {
+                    if (typeof arrival === "object" && arrival !== null && "time" in arrival && typeof arrival.time === "string" &&
+                      typeof stopId === "string" &&
+                      scheduleRelationship === "SCHEDULED") {
                       const instances = getBusInstancesArray(stopId, routeId, directionId);
                       if (instances !== undefined) {
-                        instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, seconds: arrival.time });
+                        instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, seconds: parseInt(arrival.time) });
                       }
                     }
                   }
