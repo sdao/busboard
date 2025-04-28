@@ -36,7 +36,11 @@ main {
 
 main:has(> :nth-child(2):last-child) {
 	grid-template-columns: 2fr 1fr;
-	font-size: 0.7em;
+	font-size: 0.8em;
+}
+
+main:has(> :nth-child(2):last-child) h1 {
+	margin: 0.1em 0;
 }
 
 main:empty {
@@ -76,9 +80,16 @@ article>div:last-child,
 header>div:last-child {
 	font-size: 2em;
 	margin: 0.1em;
-	flex: none;
 	text-align: right;
 	color: white;
+}
+
+article>div:last-child {
+	flex: 0;
+}
+
+header>div:last-child {
+	flex: none;
 }
 
 article>div:first-child,

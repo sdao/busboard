@@ -173,7 +173,18 @@ async function getBusTimes(searchParams: URLSearchParams): Promise<BusTimes | Ap
     return apiError(500, typeof e === "object" && e !== null ? e.toString() : "Unknown error parsing JSON");
   }
 
-  if (typeof payload !== "object" || payload === null || !("entity" in payload) || !Array.isArray(payload.entity)) {
+  if (typeof payload !== "object" || payload === null) {
+    return apiError(500, `<${response.url}> response is missing JSON root object`);
+  }
+
+  if (!("header" in payload) || typeof payload.header !== "object" || payload.header === null ||
+    !("timestamp" in payload.header) || typeof payload.header.timestamp !== "string") {
+    return apiError(500, `<${response.url}> response is missing header or header.timestamp`);
+  }
+
+  const feedTimestamp = parseInt(payload.header.timestamp);
+
+  if (!("entity" in payload) || !Array.isArray(payload.entity)) {
     return apiError(500, `<${response.url}> response is missing entity`);
   }
 
@@ -205,31 +216,39 @@ async function getBusTimes(searchParams: URLSearchParams): Promise<BusTimes | Ap
   }
 
   for (const entity of payload.entity as unknown[]) {
-    if (typeof entity === "object" && entity !== null && "tripUpdate" in entity &&
-      typeof entity.tripUpdate === "object" && entity.tripUpdate !== null && "trip" in entity.tripUpdate && "stopTimeUpdate" in entity.tripUpdate) {
+    if (typeof entity === "object" && entity !== null &&
+      "tripUpdate" in entity && typeof entity.tripUpdate === "object" && entity.tripUpdate !== null &&
+      "trip" in entity.tripUpdate && typeof entity.tripUpdate.trip === "object" && entity.tripUpdate.trip !== null &&
+      "stopTimeUpdate" in entity.tripUpdate && Array.isArray(entity.tripUpdate.stopTimeUpdate)) {
       const { trip, stopTimeUpdate } = entity.tripUpdate;
-      if (typeof trip === "object" && trip !== null && "routeId" in trip && "directionId" in trip &&
-        Array.isArray(stopTimeUpdate)) {
+      if ("routeId" in trip && typeof trip.routeId === "string" &&
+        "directionId" in trip && typeof trip.directionId === "number") {
         const { routeId, directionId } = trip;
-        if (typeof routeId === "string" && typeof directionId === "number") {
-          // Assume that the bus has left the terminus; if we still see stop sequence 1 in the list, decide that it hasn't
+        {
           let hasLeftTerminus = true;
-          if (stopTimeUpdate.length > 0) {
-            const update = stopTimeUpdate[0];
-            if (typeof update === "object" && update !== null && "stopSequence" in update) {
-              if (update.stopSequence === 1) {
-                hasLeftTerminus = false;
-              }
-            }
-          }
-
           for (const update of stopTimeUpdate as unknown[]) {
-            if (typeof update === "object" && update !== null && "arrival" in update && "stopId" in update && "scheduleRelationship" in update) {
-              const { stopId, scheduleRelationship, arrival } = update;
-              if (typeof stopId === "string" && stops.includes(stopId)) {
-                if (scheduleRelationship === "SCHEDULED" &&
-                  typeof arrival === "object" && arrival !== null && "time" in arrival && typeof arrival.time === "string") {
-                  getBusInstancesArray(stopId, routeId, directionId).push({ hasLeftTerminus, seconds: parseInt(arrival.time) });
+            if (typeof update === "object" && update !== null) {
+              // Check if this is the initial terminus stop (must be the first stop!)
+              if (hasLeftTerminus &&
+                "stopSequence" in update && update.stopSequence === 1 &&
+                "departure" in update && typeof update.departure === "object" && update.departure !== null &&
+                "time" in update.departure && typeof update.departure.time === "string") {
+                // Check if the bus had not left the terminus yet when the feed was generated
+                const departureTimestamp = parseInt(update.departure.time);
+                if (departureTimestamp > feedTimestamp) {
+                  // If so, then mark that the bus is still at the terminus
+                  hasLeftTerminus = false;
+                }
+              }
+
+              // Now check if this stop is on the list of stops for which to get bus times
+              if ("stopId" in update && typeof update.stopId === "string" &&
+                stops.includes(update.stopId) &&
+                "scheduleRelationship" in update &&
+                "arrival" in update && typeof update.arrival === "object" && update.arrival !== null &&
+                "time" in update.arrival && typeof update.arrival.time === "string") {
+                if (update.scheduleRelationship === "SCHEDULED") {
+                  getBusInstancesArray(update.stopId, routeId, directionId).push({ hasLeftTerminus, seconds: parseInt(update.arrival.time) });
                 }
 
                 // This stop cannot occur again in this tripUpdate.stopTimeUpdate
