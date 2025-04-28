@@ -117,10 +117,11 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
           arrivals.set(stopId, new Map());
         }
 
-        function getBusInstancesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): { hasLeftTerminus: boolean, seconds: number }[] | undefined {
-          const arrivalsStop = arrivals.get(stopId);
+        function getBusInstancesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): { hasLeftTerminus: boolean, seconds: number }[] {
+          let arrivalsStop = arrivals.get(stopId);
           if (arrivalsStop === undefined) {
-            return undefined;
+            arrivalsStop = new Map();
+            arrivals.set(stopId, new Map());
           }
 
           let arrivalsRoute = arrivalsStop.get(routeId);
@@ -146,31 +147,28 @@ async function getBusTimes(stops: string[]): Promise<BusTimes> {
               Array.isArray(stopTimeUpdate)) {
               const { routeId, directionId } = trip;
               if (typeof routeId === "string" && typeof directionId === "number") {
-                let anyStopSequences = false;
-                let hasTerminusStopSequence = false;
-                for (const update of stopTimeUpdate as unknown[]) {
+                // Assume that the bus has left the terminus; if we still see stop sequence 1 in the list, decide that it hasn't
+                let hasLeftTerminus = true;
+                if (stopTimeUpdate.length > 0) {
+                  const update = stopTimeUpdate[0];
                   if (typeof update === "object" && update !== null && "stopSequence" in update) {
-                    anyStopSequences = true;
                     if (update.stopSequence === 1) {
-                      hasTerminusStopSequence = true;
+                      hasLeftTerminus = false;
                     }
-                  }
-
-                  if (anyStopSequences && hasTerminusStopSequence) {
-                    break;
                   }
                 }
 
                 for (const update of stopTimeUpdate as unknown[]) {
                   if (typeof update === "object" && update !== null && "arrival" in update && "stopId" in update && "scheduleRelationship" in update) {
-                    const { arrival, stopId, scheduleRelationship } = update;
-                    if (typeof arrival === "object" && arrival !== null && "time" in arrival && typeof arrival.time === "string" &&
-                      typeof stopId === "string" &&
-                      scheduleRelationship === "SCHEDULED") {
-                      const instances = getBusInstancesArray(stopId, routeId, directionId);
-                      if (instances !== undefined) {
-                        instances.push({ hasLeftTerminus: !anyStopSequences || !hasTerminusStopSequence, seconds: parseInt(arrival.time) });
+                    const { stopId, scheduleRelationship, arrival } = update;
+                    if (typeof stopId === "string" && stops.includes(stopId)) {
+                      if (scheduleRelationship === "SCHEDULED" &&
+                        typeof arrival === "object" && arrival !== null && "time" in arrival && typeof arrival.time === "string") {
+                        getBusInstancesArray(stopId, routeId, directionId).push({ hasLeftTerminus, seconds: parseInt(arrival.time) });
                       }
+
+                      // This stop cannot occur again in this tripUpdate.stopTimeUpdate
+                      break;
                     }
                   }
                 }
@@ -234,7 +232,8 @@ async function getTransitInfo(lat: number, lon: number): Promise<TransitSystemIn
           const tripShortNameIndex = headerFields.indexOf("trip_short_name");
 
           const routeNames: Map<string, Map<number, string>> = new Map();
-          for (const line of tripsCsvLines.slice(1)) {
+          for (let i = 1; i < tripsCsvLines.length; ++i) {
+            const line = tripsCsvLines[i];
             const fields = line.trim().split(",");
             const routeId = fields[routeIdIndex];
             const directionId = parseInt(fields[directionIdIndex]);
@@ -274,7 +273,8 @@ async function getTransitInfo(lat: number, lon: number): Promise<TransitSystemIn
 
           const maxClosestStops = 2;
           const closestStops: { stopId: StopId, angle: number }[] = [];
-          for (const line of stopsCsvLines.slice(1)) {
+          for (let i = 1; i < stopsCsvLines.length; ++i) {
+            const line = stopsCsvLines[i];
             const fields = line.trim().split(",");
             const stopId = fields[stopIdIndex];
             const stopLat = parseFloat(fields[stopLatIndex]);
@@ -289,8 +289,8 @@ async function getTransitInfo(lat: number, lon: number): Promise<TransitSystemIn
             }
 
             function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
-              const dlat = Math.abs(lat1 - lat2);
-              const dlon = Math.abs(lon1 - lon2);
+              const dlat = lat1 - lat2;
+              const dlon = lon1 - lon2;
               return hav(dlat) + (Math.cos(lat1) * Math.cos(lat2) * hav(dlon));
             }
 

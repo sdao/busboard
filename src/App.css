@@ -25,12 +25,13 @@
 	--urgent-color: hsl(0, 100%, 65%);
 	--warning-color: hsl(15, 100%, 65%);
 	--info-color: hsl(30, 100%, 65%);
-	--high-color: hsl(30, 80%, 70%);;
-	--low-color: hsl(220, 80%, 70%);;
+	--high-color: hsl(30, 80%, 70%);
+	;
+	--low-color: hsl(220, 80%, 70%);
+	;
 }
 
-.hide-mouse-cursor
-{
+.hide-mouse-cursor {
 	cursor: none;
 }
 
@@ -51,8 +52,7 @@ header {
 	font-size: 1em;
 }
 
-main
-{
+main {
 	display: grid;
 	grid-template-columns: 1fr;
 	gap: 0.1em 0.1em;
@@ -112,22 +112,19 @@ header>div:first-child {
 	flex: none;
 }
 
-section.radar
-{
+section.radar {
 	flex: 1;
 	display: flex;
 	align-items: stretch;
 }
 
-section.radar>article
-{
+section.radar>article {
 	padding: 0;
 	overflow: clip;
 	width: 100%;
 }
 
-section.radar>article>div
-{
+section.radar>article>div {
 	height: 100%;
 	margin: 0;
 }
@@ -177,6 +174,10 @@ h1>* {
 	font-size: 0.5em;
 }
 
+.minutes-display-list:empty::after {
+	content: "\2014";
+}
+
 /* Only display the first two instances in the list */
 .minutes-display:not(:first-child, :nth-child(2)) {
 	display: none;
@@ -223,8 +224,8 @@ h1>* {
 	--weather-transition: 0%;
 	--weather-transition-2: 100%;
 	overflow: hidden;
-  	white-space: nowrap;
-  	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 }
 
 .weather-description:has(> :nth-child(2):last-child) {
@@ -239,8 +240,8 @@ h1>* {
 	grid-row: 1;
 	grid-column: 1;
 	overflow: hidden;
-  	white-space: nowrap;
-  	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 }
 
 .weather-description>div:first-child {
@@ -256,6 +257,7 @@ h1>* {
 }
 
 @keyframes scroll-in-2 {
+
 	0%,
 	45% {
 		--weather-transition: 0%;
@@ -285,6 +287,7 @@ h1>* {
 }
 
 @keyframes scroll-in-3 {
+
 	0%,
 	30% {
 		--weather-transition: 0%;
@@ -300,7 +303,7 @@ h1>* {
 		--weather-transition-3: 100%;
 	}
 
-	
+
 	/* scroll second div in 64-67 */
 	67% {
 		--weather-transition: -200%;

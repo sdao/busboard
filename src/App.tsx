@@ -260,7 +260,7 @@ function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { 
     <article>
       <div><RouteIdDisplay routeId={routeId} /></div>
       <div className="headsign"><RouteNameDisplay routeId={routeId} directionId={directionId} transitInfo={transitInfo} /></div>
-      <div><div>{nextInstances.map(inst => <MinutesDisplay key={inst.time} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div><div className="subtitle">minutes</div></div>
+      <div><div className="minutes-display-list">{nextInstances.map(inst => <MinutesDisplay key={inst.time} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div><div className="subtitle">minutes</div></div>
     </article>
   )
 }
