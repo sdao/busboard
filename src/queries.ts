@@ -1,15 +1,23 @@
 import { queryOptions } from '@tanstack/react-query';
+import { hc } from "hono/client";
 import { ApiError, BusTimes, ReverseGeocode, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
+import type { AppType } from "../worker/index";
+
+const client = hc<AppType>("/");
 
 async function formatApiError(response: Response): Promise<string> {
     const contentType = response.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
         try {
-            const apiError = await response.json() as ApiError;
-            return `<${response.url}> responded with status ${apiError.status}: ${apiError.error}`;
+            const json = await response.json() as unknown;
+            if (typeof json === "object" && json !== null &&
+                "status" in json && typeof json.status === "number" && "error" in json && typeof json.error === "string") {
+                const apiError: ApiError = { status: json.status, error: json.error };
+                return `<${response.url}> responded with status ${apiError.status}: ${apiError.error}`;
+            }
         }
         catch {
-            // Ignore
+            // Ignore all exceptions and fall through
         }
     }
 
@@ -22,12 +30,12 @@ export function getReverseGeocodeQuery(lat: number, lon: number) {
         queryFn: async () => {
             console.log(`Fetching reverse geocode for ${lat}, ${lon}...`);
 
-            const response = await fetch(`/geo?lat=${lat}&lon=${lon}`);
+            const response = await client.geo.$get({ query: { lat: String(lat), lon: String(lon) } });
             if (!response.ok) {
                 throw new Error(await formatApiError(response));
             }
 
-            const result = await response.json() as ReverseGeocode;
+            const result: ReverseGeocode = await response.json();
             console.info(`Received reverse geocode: ${result.zip},${result.weatherStation},${result.weatherTile.wfo},${result.weatherTile.x},${result.weatherTile.y}`);
             return result;
         },
@@ -41,12 +49,12 @@ export function getTransitInfoQuery(lat: number, lon: number) {
         queryFn: async () => {
             console.log(`Fetching transit info for ${lat}, ${lon}...`);
 
-            const response = await fetch(`/transitinfo?lat=${lat}&lon=${lon}`);
+            const response = await client.transitinfo.$get({ query: { lat: String(lat), lon: String(lon) } });
             if (!response.ok) {
                 throw new Error(await formatApiError(response));
             }
 
-            const result = await response.json() as TransitSystemInfo;
+            const result: TransitSystemInfo = await response.json();
             console.info(`Received transit info: ${result.routes.length} routes; ${result.closestStops} closest stops`);
             return result;
         },
@@ -61,13 +69,13 @@ export function getBusTimesQuery(transitInfo?: TransitSystemInfo) {
             if (transitInfo !== undefined && transitInfo.closestStops.length !== 0) {
                 console.log(`Fetching bus times for ${transitInfo.closestStops}...`);
 
-                const stopIds = transitInfo.closestStops.join(",");
-                const response = await fetch(`/bustimes?stops=${stopIds}`);
+                const stops = transitInfo.closestStops.join(",");
+                const response = await client.bustimes.$get({ query: { stops } });
                 if (!response.ok) {
                     throw new Error(await formatApiError(response));
                 }
 
-                const result = await response.json() as BusTimes;
+                const result: BusTimes = await response.json();
                 console.info(`Received bus times: ${result.stops.length} stops`);
                 return result;
             }
@@ -108,12 +116,12 @@ export function getWeatherCurrentQuery(reverseGeocode?: ReverseGeocode) {
             if (reverseGeocode !== undefined) {
                 console.log(`Fetching current weather for ${reverseGeocode.weatherStation}...`);
 
-                const response = await fetch(`/weather?station=${reverseGeocode.weatherStation}`);
+                const response = await client.weather.$get({ query: { station: reverseGeocode.weatherStation } });
                 if (!response.ok) {
                     throw new Error(await formatApiError(response));
                 }
 
-                const result = await response.json() as WeatherConditions;
+                const result: WeatherConditions = await response.json();
                 console.info(`Received current weather: ${result.description}, ${result.temperature}`);
                 return result;
             }
@@ -133,12 +141,12 @@ export function getWeatherForecastQuery(reverseGeocode?: ReverseGeocode) {
                 const weatherTile = reverseGeocode.weatherTile;
                 console.log(`Fetching weather forecast for ${weatherTile.wfo},${weatherTile.x},${weatherTile.y}...`);
 
-                const response = await fetch(`/forecast?wfo=${weatherTile.wfo}&x=${weatherTile.x}&y=${weatherTile.y}`);
+                const response = await client.forecast.$get({ query: { wfo: weatherTile.wfo, x: String(weatherTile.x), y: String(weatherTile.y) } });
                 if (!response.ok) {
                     throw new Error(await formatApiError(response));
                 }
 
-                const result = await response.json() as WeatherForecast;
+                const result: WeatherForecast = await response.json();
                 console.info(`Received weather forecast: high ${result.highTemperature}, low ${result.lowTemperature}, precip ${result.chancePrecipitation}`);
                 return result;
             }
@@ -157,12 +165,12 @@ export function getUvForecastQuery(reverseGeocode?: ReverseGeocode) {
             if (reverseGeocode !== undefined) {
                 console.log(`Fetching UV for ${reverseGeocode.zip}...`);
 
-                const response = await fetch(`/uv?zip=${reverseGeocode.zip}`);
+                const response = await client.uv.$get({ query: {  zip: reverseGeocode.zip } });
                 if (!response.ok) {
                     throw new Error(await formatApiError(response));
                 }
 
-                const result = await response.json() as UvForecastDay;
+                const result: UvForecastDay = await response.json();
                 console.info(`Received UV: ${result.forecasts.length} time segments`);
                 return result;
             }
