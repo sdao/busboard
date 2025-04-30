@@ -3,7 +3,8 @@ import { Temporal } from "@js-temporal/polyfill";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { DirectionId, RouteId, StopId, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, ApiError, UvForecastHour, StopInstance, RouteInstance, BusInstance, DirectionInstance, TransitSystemRoute } from "../shared/types";
+import { StopId, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, TransitSystemRoute } from "../shared/types";
+import BusTimesBuilder from "../shared/busTimesBuilder";
 import { HTTPException } from "hono/http-exception";
 
 async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat, lon }: { lat: number, lon: number }): Promise<ReverseGeocode> {
@@ -155,115 +156,26 @@ async function getBusTimes({ stops }: { stops: string }): Promise<BusTimes> {
     payload = JSON.parse(jsonString) as unknown;
   }
   catch (e) {
-    throw new HTTPException(undefined, { message: `Error parsing JSON: ${e}`, cause: e });
+    throw new HTTPException(undefined, { message: `<${response.url}> error parsing JSON: ${e}`, cause: e });
   }
 
-  if (typeof payload !== "object" || payload === null) {
-    throw new HTTPException(undefined, { message: `<${response.url}> response is missing JSON root object` });
+  let builder;
+  try {
+    builder = BusTimesBuilder.createFromJson(stopsList, payload);
+  }
+  catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new HTTPException(undefined, { message: `<${response.url}> response has malformed JSON: ${message}`, cause: e});
   }
 
-  if (!("header" in payload) || typeof payload.header !== "object" || payload.header === null ||
-    !("timestamp" in payload.header) || typeof payload.header.timestamp !== "string") {
-    throw new HTTPException(undefined, { message: `<${response.url}> response is missing header or header.timestamp` });
-  }
+  return builder.build();
+}
 
-  const feedTimestamp = parseInt(payload.header.timestamp);
-
-  if (!("entity" in payload) || !Array.isArray(payload.entity)) {
-    throw new HTTPException(undefined, { message: `<${response.url}> response is missing entity` });
-  }
-
-  const arrivals: Map<StopId, Map<RouteId, Map<DirectionId, { hasLeftTerminus: boolean, seconds: number }[]>>> = new Map();
-  for (const stopId of stopsList) {
-    arrivals.set(stopId, new Map());
-  }
-
-  function getBusInstancesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): { hasLeftTerminus: boolean, seconds: number }[] {
-    let arrivalsStop = arrivals.get(stopId);
-    if (arrivalsStop === undefined) {
-      arrivalsStop = new Map();
-      arrivals.set(stopId, new Map());
-    }
-
-    let arrivalsRoute = arrivalsStop.get(routeId);
-    if (arrivalsRoute === undefined) {
-      arrivalsRoute = new Map();
-      arrivalsStop.set(routeId, arrivalsRoute);
-    }
-
-    let arrivalsDirection = arrivalsRoute.get(directionId);
-    if (arrivalsDirection === undefined) {
-      arrivalsDirection = [];
-      arrivalsRoute.set(directionId, arrivalsDirection);
-    }
-
-    return arrivalsDirection;
-  }
-
-  for (const entity of payload.entity as unknown[]) {
-    if (typeof entity === "object" && entity !== null &&
-      "tripUpdate" in entity && typeof entity.tripUpdate === "object" && entity.tripUpdate !== null &&
-      "trip" in entity.tripUpdate && typeof entity.tripUpdate.trip === "object" && entity.tripUpdate.trip !== null &&
-      "stopTimeUpdate" in entity.tripUpdate && Array.isArray(entity.tripUpdate.stopTimeUpdate)) {
-      const { trip, stopTimeUpdate } = entity.tripUpdate;
-      if ("routeId" in trip && typeof trip.routeId === "string" &&
-        "directionId" in trip && typeof trip.directionId === "number") {
-        const { routeId, directionId } = trip;
-        {
-          let hasLeftTerminus = true;
-          for (const update of stopTimeUpdate as unknown[]) {
-            if (typeof update === "object" && update !== null) {
-              // Check if this is the initial terminus stop (must be the first stop!)
-              if (hasLeftTerminus &&
-                "stopSequence" in update && update.stopSequence === 1 &&
-                "departure" in update && typeof update.departure === "object" && update.departure !== null &&
-                "time" in update.departure && typeof update.departure.time === "string") {
-                // Check if the bus had not left the terminus yet when the feed was generated
-                const departureTimestamp = parseInt(update.departure.time);
-                if (departureTimestamp > feedTimestamp) {
-                  // If so, then mark that the bus is still at the terminus
-                  hasLeftTerminus = false;
-                }
-              }
-
-              // Now check if this stop is on the list of stops for which to get bus times
-              if ("stopId" in update && typeof update.stopId === "string" &&
-                stopsList.includes(update.stopId) &&
-                "scheduleRelationship" in update &&
-                "arrival" in update && typeof update.arrival === "object" && update.arrival !== null &&
-                "time" in update.arrival && typeof update.arrival.time === "string") {
-                if (update.scheduleRelationship === "SCHEDULED") {
-                  getBusInstancesArray(update.stopId, routeId, directionId).push({ hasLeftTerminus, seconds: parseInt(update.arrival.time) });
-                }
-
-                // This stop cannot occur again in this tripUpdate.stopTimeUpdate
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  const busTimes: BusTimes = { stops: [] };
-  for (const [stopId, routes] of arrivals) {
-    const niceStop: StopInstance = { stopId, routes: [] };
-    busTimes.stops.push(niceStop);
-
-    for (const [routeId, directions] of routes) {
-      const niceRoute: RouteInstance = { routeId, directions: [] };
-      niceStop.routes.push(niceRoute);
-
-      for (const [directionId, times] of directions) {
-        const nextInstances: BusInstance[] = times.sort((a, b) => a.seconds - b.seconds).slice(0, 5).map(arrival => ({ hasLeftTerminus: arrival.hasLeftTerminus, time: Temporal.Instant.fromEpochMilliseconds(arrival.seconds * 1000.0).toString() }));
-        const niceDirection: DirectionInstance = { directionId, nextInstances };
-        niceRoute.directions.push(niceDirection);
-      }
-    }
-  }
-
-  return busTimes;
+async function getGtfsRealtime(): Promise<Response> {
+  const response = await fetch("https://data.texas.gov/download/rmk2-acnw/application%2Foctet-stream");
+  const newResponse = new Response(response.body, response);
+  newResponse.headers.set("Cache-Control", "max-age=15");
+  return newResponse;
 }
 
 async function getTransitInfo({ lat, lon }: { lat: number, lon: number }): Promise<TransitSystemInfo> {
@@ -615,23 +527,7 @@ async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay
   return { forecasts };
 }
 
-interface Env {
-  WEATHER_API_KEY: string;
-  OSM_NOMINATIM_USER_AGENT: string;
-}
-
 const app = new Hono<{ Bindings: Env }>()
-  .onError((err, c) => {
-    console.error(err);
-    if (err instanceof HTTPException) {
-      const apiError: ApiError = { status: err.status, error: err.message };
-      return c.json(apiError, err.status);
-    }
-    else {
-      const apiError: ApiError = { status: 500, error: err.message };
-      return c.json(apiError, 500);
-    }
-  })
   .get(
     "/bustimes",
     zValidator(
@@ -646,8 +542,8 @@ const app = new Hono<{ Bindings: Env }>()
     zValidator(
       "query",
       z.object({
-        lat: z.number(),
-        lon: z.number(),
+        lat: z.coerce.number(),
+        lon: z.coerce.number(),
       })
     ),
     async (c) => c.json(await getTransitInfo(c.req.valid("query"))))
@@ -666,8 +562,8 @@ const app = new Hono<{ Bindings: Env }>()
       "query",
       z.object({
         wfo: z.string(),
-        x: z.number().int(),
-        y: z.number().int(),
+        x: z.coerce.number().int(),
+        y: z.coerce.number().int(),
       })
     ),
     async (c) => c.json(await getWeatherForecast(c.env.WEATHER_API_KEY, c.req.valid("query"))))
@@ -685,11 +581,12 @@ const app = new Hono<{ Bindings: Env }>()
     zValidator(
       "query",
       z.object({
-        lat: z.number(),
-        lon: z.number(),
+        lat: z.coerce.number(),
+        lon: z.coerce.number(),
       })
     ),
     async (c) => c.json(await getReverseGeocode(c.env.OSM_NOMINATIM_USER_AGENT, c.env.WEATHER_API_KEY, c.req.valid("query"))))
+  .get("/realtime", getGtfsRealtime)
   ;
 
 export default app;

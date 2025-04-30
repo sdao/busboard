@@ -1,28 +1,10 @@
 import { queryOptions } from '@tanstack/react-query';
 import { hc } from "hono/client";
-import { ApiError, BusTimes, ReverseGeocode, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
+import { BusTimes, ReverseGeocode, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
 import type { AppType } from "../worker/index";
+import BusTimesBuilder from '../shared/busTimesBuilder';
 
 const client = hc<AppType>("/");
-
-async function formatApiError(response: Response): Promise<string> {
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-        try {
-            const json = await response.json() as unknown;
-            if (typeof json === "object" && json !== null &&
-                "status" in json && typeof json.status === "number" && "error" in json && typeof json.error === "string") {
-                const apiError: ApiError = { status: json.status, error: json.error };
-                return `<${response.url}> responded with status ${apiError.status}: ${apiError.error}`;
-            }
-        }
-        catch {
-            // Ignore all exceptions and fall through
-        }
-    }
-
-    return `<${response.url}> responded with status ${response.status}`;
-}
 
 export function getReverseGeocodeQuery(lat: number, lon: number) {
     return queryOptions({
@@ -31,10 +13,6 @@ export function getReverseGeocodeQuery(lat: number, lon: number) {
             console.log(`Fetching reverse geocode for ${lat}, ${lon}...`);
 
             const response = await client.geo.$get({ query: { lat: String(lat), lon: String(lon) } });
-            if (!response.ok) {
-                throw new Error(await formatApiError(response));
-            }
-
             const result: ReverseGeocode = await response.json();
             console.info(`Received reverse geocode: ${result.zip},${result.weatherStation},${result.weatherTile.wfo},${result.weatherTile.x},${result.weatherTile.y}`);
             return result;
@@ -50,10 +28,6 @@ export function getTransitInfoQuery(lat: number, lon: number) {
             console.log(`Fetching transit info for ${lat}, ${lon}...`);
 
             const response = await client.transitinfo.$get({ query: { lat: String(lat), lon: String(lon) } });
-            if (!response.ok) {
-                throw new Error(await formatApiError(response));
-            }
-
             const result: TransitSystemInfo = await response.json();
             console.info(`Received transit info: ${result.routes.length} routes; ${result.closestStops} closest stops`);
             return result;
@@ -71,13 +45,53 @@ export function getBusTimesQuery(transitInfo?: TransitSystemInfo) {
 
                 const stops = transitInfo.closestStops.join(",");
                 const response = await client.bustimes.$get({ query: { stops } });
-                if (!response.ok) {
-                    throw new Error(await formatApiError(response));
-                }
-
                 const result: BusTimes = await response.json();
                 console.info(`Received bus times: ${result.stops.length} stops`);
                 return result;
+            }
+
+            return { stops: [] };
+        },
+        enabled: transitInfo !== undefined,
+        refetchInterval: (query) => {
+            if (query.state.data !== undefined) {
+                // If there are no more scheduled buses for the night, throttle updates to every ten minutes
+                const anyBusesScheduled = (busTimes: BusTimes) => {
+                    for (const stop of busTimes.stops) {
+                        for (const route of stop.routes) {
+                            for (const dir of route.directions) {
+                                if (dir.nextInstances.length !== 0) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                };
+
+                if (!anyBusesScheduled(query.state.data)) {
+                    return 10 * 60 * 1000;
+                }
+            }
+
+            return 1 * 60 * 1000;
+        }
+    });
+}
+
+export function getGtfsRealtimeQuery(transitInfo?: TransitSystemInfo) {
+    return queryOptions({
+        queryKey: ["gtfsRealtime", transitInfo?.closestStops],
+        queryFn: async () => {
+            if (transitInfo !== undefined && transitInfo.closestStops.length !== 0) {
+                console.log(`Fetching GTFS-Realtime for ${transitInfo.closestStops}...`);
+
+                const response = await client.realtime.$get();
+                const builder = BusTimesBuilder.createFromProtobuf(transitInfo.closestStops, await response.arrayBuffer());
+                const busTimes = builder.build();
+                
+                console.info(`Received GTFS-Realtime: ${busTimes.stops.length} stops`);
+                return busTimes;
             }
 
             return { stops: [] };
@@ -117,10 +131,6 @@ export function getWeatherCurrentQuery(reverseGeocode?: ReverseGeocode) {
                 console.log(`Fetching current weather for ${reverseGeocode.weatherStation}...`);
 
                 const response = await client.weather.$get({ query: { station: reverseGeocode.weatherStation } });
-                if (!response.ok) {
-                    throw new Error(await formatApiError(response));
-                }
-
                 const result: WeatherConditions = await response.json();
                 console.info(`Received current weather: ${result.description}, ${result.temperature}`);
                 return result;
@@ -142,10 +152,6 @@ export function getWeatherForecastQuery(reverseGeocode?: ReverseGeocode) {
                 console.log(`Fetching weather forecast for ${weatherTile.wfo},${weatherTile.x},${weatherTile.y}...`);
 
                 const response = await client.forecast.$get({ query: { wfo: weatherTile.wfo, x: String(weatherTile.x), y: String(weatherTile.y) } });
-                if (!response.ok) {
-                    throw new Error(await formatApiError(response));
-                }
-
                 const result: WeatherForecast = await response.json();
                 console.info(`Received weather forecast: high ${result.highTemperature}, low ${result.lowTemperature}, precip ${result.chancePrecipitation}`);
                 return result;
@@ -166,10 +172,6 @@ export function getUvForecastQuery(reverseGeocode?: ReverseGeocode) {
                 console.log(`Fetching UV for ${reverseGeocode.zip}...`);
 
                 const response = await client.uv.$get({ query: {  zip: reverseGeocode.zip } });
-                if (!response.ok) {
-                    throw new Error(await formatApiError(response));
-                }
-
                 const result: UvForecastDay = await response.json();
                 console.info(`Received UV: ${result.forecasts.length} time segments`);
                 return result;

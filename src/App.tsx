@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Temporal } from "@js-temporal/polyfill";
 
-import { getBusTimesQuery, getReverseGeocodeQuery, getTransitInfoQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
+import { getGtfsRealtimeQuery, getReverseGeocodeQuery, getTransitInfoQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
 import BusTimeDisplay from "./BusTimeDisplay";
 import RadarMap from "./RadarMap";
 import WeatherDisplay from "./WeatherDisplay";
@@ -42,7 +42,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   useQueryClient();
   const reverseGeocode = useQuery(getReverseGeocodeQuery(lat, lon));
   const transitInfo = useQuery(getTransitInfoQuery(lat, lon));
-  const busTimes = useQuery(getBusTimesQuery(transitInfo.data));
+  const busTimes = useQuery(getGtfsRealtimeQuery(transitInfo.data));
   const weatherCurrent = useQuery(getWeatherCurrentQuery(reverseGeocode.data));
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));

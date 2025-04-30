@@ -2,7 +2,6 @@ export type RouteId = string;
 export type StopId = string;
 export type DirectionId = number;
 
-export type ApiError = { status: number, error: string };
 export type BusInstance = { hasLeftTerminus: boolean, time: string };
 export type DirectionInstance =  { directionId: DirectionId, nextInstances: BusInstance[] };
 export type RouteInstance = { routeId: RouteId, directions: DirectionInstance[] };
