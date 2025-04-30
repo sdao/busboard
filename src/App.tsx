@@ -47,6 +47,14 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));
 
+  useEffect(() => {
+    for (const failureReason of [reverseGeocode.failureReason, transitInfo.failureReason, busTimes.failureReason, weatherCurrent.failureReason, weatherForecast.failureReason, uvForecast.failureReason]) {
+      if (failureReason !== null) {
+        console.error(failureReason);
+      }
+    }
+  }, [reverseGeocode.failureReason, transitInfo.failureReason, busTimes.failureReason, weatherCurrent.failureReason, weatherForecast.failureReason, uvForecast.failureReason]);
+
   // Build rows for each stop/route/direction
   const rows = [];
   if (busTimes.data !== undefined) {
