@@ -3,6 +3,7 @@ import { hc } from "hono/client";
 import { BusTimes, ReverseGeocode, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
 import type { AppType } from "../worker/index";
 import BusTimesBuilder from '../shared/busTimesBuilder';
+import TransitSystemInfoBuilder from '../shared/transitSystemInfoBuilder';
 
 const client = hc<AppType>("/");
 
@@ -21,6 +22,7 @@ export function getReverseGeocodeQuery(lat: number, lon: number) {
     });
 }
 
+/*
 export function getTransitInfoQuery(lat: number, lon: number) {
     return queryOptions({
         queryKey: ["transitInfo", lat, lon],
@@ -76,6 +78,24 @@ export function getBusTimesQuery(transitInfo?: TransitSystemInfo) {
 
             return 1 * 60 * 1000;
         }
+    });
+}
+*/
+
+export function getGtfsStaticQuery(lat: number, lon: number) {
+    return queryOptions({
+        queryKey: ["gtfsStatic", lat, lon],
+        queryFn: async () => {
+            console.log(`Fetching GTFS-Static for ${lat}, ${lon}...`);
+
+            const response = await client.gtfs.$get();
+            const builder = await TransitSystemInfoBuilder.createFromGtfsZip(lat, lon, await response.arrayBuffer());
+            const transitInfo = builder.build();
+
+            console.info(`Received GTFS-Static: ${transitInfo.routes.length} routes; ${transitInfo.closestStops} closest stops`);
+            return transitInfo;
+        },
+        retry: true
     });
 }
 

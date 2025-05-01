@@ -1,10 +1,8 @@
-import JSZip from "jszip";
 import { Temporal } from "@js-temporal/polyfill";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { StopId, BusTimes, TransitSystemInfo, WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, TransitSystemRoute } from "../shared/types";
-import BusTimesBuilder from "../shared/busTimesBuilder";
+import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour } from "../shared/types";
 import { HTTPException } from "hono/http-exception";
 
 async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat, lon }: { lat: number, lon: number }): Promise<ReverseGeocode> {
@@ -135,6 +133,7 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
   return { lat, lon, zip, weatherTile, weatherStation };
 }
 
+/*
 async function getBusTimes({ stops }: { stops: string }): Promise<BusTimes> {
   const stopsList = stops.split(",");
 
@@ -170,14 +169,23 @@ async function getBusTimes({ stops }: { stops: string }): Promise<BusTimes> {
 
   return builder.build();
 }
+*/
+
+async function getGtfsStatic(): Promise<Response> {
+  const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
+  const newResponse = new Response(response.body, response);
+  newResponse.headers.set("Cache-Control", "max-age=3600");
+  return newResponse;
+}
 
 async function getGtfsRealtime(): Promise<Response> {
   const response = await fetch("https://data.texas.gov/download/rmk2-acnw/application%2Foctet-stream");
   const newResponse = new Response(response.body, response);
-  newResponse.headers.set("Cache-Control", "max-age=15");
+  newResponse.headers.set("Cache-Control", "max-age=30");
   return newResponse;
 }
 
+/*
 async function getTransitInfo({ lat, lon }: { lat: number, lon: number }): Promise<TransitSystemInfo> {
   const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
 
@@ -191,135 +199,26 @@ async function getTransitInfo({ lat, lon }: { lat: number, lon: number }): Promi
     throw new HTTPException(undefined, { message: `<${response.url}> did not respond with octet-stream content` });
   }
 
-  let zipPayload: JSZip;
+  let zipData;
   try {
-    const zip = new JSZip();
-    const zipData = await response.arrayBuffer();
-    zipPayload = await zip.loadAsync(zipData);
+    zipData = await response.arrayBuffer();
   }
   catch (e) {
     throw new HTTPException(undefined, { message: `Error reading ZIP archive: ${e}`, cause: e });
   }
 
-  const transitInfo: TransitSystemInfo = { routes: [], closestStops: [] };
-
-  const tripsFile = zipPayload.file("trips.txt");
-  if (tripsFile === null) {
-    throw new HTTPException(undefined, { message: `<${response.url}> is missing trips.txt` });
-  }
-
-  let tripsCsv: string;
+  let builder;
   try {
-    tripsCsv = await tripsFile.async("string");
+    builder = await TransitSystemInfoBuilder.createFromGtfsZip(lat, lon, zipData);
   }
   catch (e) {
-    throw new HTTPException(undefined, { message: `Error reading trips.txt: ${e}`, cause: e });
+    const message = e instanceof Error ? e.message : String(e);
+    throw new HTTPException(undefined, { message: `<${response.url}> response has malformed GTFS zip archive: ${message}`, cause: e});
   }
 
-  const tripsCsvLines = tripsCsv.split("\n");
-  if (tripsCsvLines.length <= 1) {
-    throw new HTTPException(undefined, { message: `<${response.url}> trips.txt is malformed` });
-  }
-
-  {
-    const headerFields = tripsCsvLines[0].trim().split(",");
-    const routeIdIndex = headerFields.indexOf("route_id");
-    const directionIdIndex = headerFields.indexOf("direction_id");
-    const tripShortNameIndex = headerFields.indexOf("trip_short_name");
-
-    const routeNames: Map<string, Map<number, string>> = new Map();
-    for (let i = 1; i < tripsCsvLines.length; ++i) {
-      const line = tripsCsvLines[i];
-      const fields = line.trim().split(",");
-      const routeId = fields[routeIdIndex];
-      const directionId = parseInt(fields[directionIdIndex]);
-      const tripShortName = fields[tripShortNameIndex];
-
-      let directions = routeNames.get(routeId);
-      if (directions === undefined) {
-        directions = new Map();
-        routeNames.set(routeId, directions);
-      }
-
-      directions.set(directionId, tripShortName);
-    }
-
-    for (const [routeId, directions] of routeNames) {
-      const niceRoute: TransitSystemRoute = { routeId, directions: [] };
-      transitInfo.routes.push(niceRoute);
-
-      for (const [directionId, name] of directions) {
-        const niceDirection = { directionId, name };
-        niceRoute.directions.push(niceDirection);
-      }
-    }
-  }
-
-  const stopsFiles = zipPayload.file("stops.txt");
-  if (stopsFiles === null) {
-    throw new HTTPException(undefined, { message: `<${response.url}> is missing stops.txt` });
-  }
-
-  let stopsCsv: string;
-  try {
-    stopsCsv = await stopsFiles.async("string");
-  }
-  catch (e) {
-    throw new HTTPException(undefined, { message: `Error reading stops.txt: ${e}`, cause: e });
-  }
-
-  const stopsCsvLines = stopsCsv.split("\n");
-  if (stopsCsvLines.length <= 1) {
-    throw new HTTPException(undefined, { message: `<${response.url}> stops.txt is malformed` });
-  }
-
-  {
-    const headerFields = stopsCsvLines[0].trim().split(",");
-    const stopIdIndex = headerFields.indexOf("stop_id");
-    const stopLatIndex = headerFields.indexOf("stop_lat");
-    const stopLonIndex = headerFields.indexOf("stop_lon");
-
-    const maxClosestStops = 2;
-    const closestStops: { stopId: StopId, angle: number }[] = [];
-    for (let i = 1; i < stopsCsvLines.length; ++i) {
-      const line = stopsCsvLines[i];
-      const fields = line.trim().split(",");
-      const stopId = fields[stopIdIndex];
-      const stopLat = parseFloat(fields[stopLatIndex]);
-      const stopLon = parseFloat(fields[stopLonIndex]);
-
-      function rad(degrees: number) {
-        return degrees * (Math.PI / 180);
-      }
-
-      function hav(angle: number) {
-        return (1.0 - Math.cos(angle)) / 2.0;
-      }
-
-      function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
-        const dlat = lat1 - lat2;
-        const dlon = lon1 - lon2;
-        return hav(dlat) + (Math.cos(lat1) * Math.cos(lat2) * hav(dlon));
-      }
-
-      const angle = haversine(rad(lat), rad(lon), rad(stopLat), rad(stopLon));
-      const insertIndex = closestStops.findIndex(elem => angle < elem.angle);
-      if (insertIndex == -1 && closestStops.length < maxClosestStops) {
-        closestStops.push({ stopId, angle });
-      }
-      else if (insertIndex >= 0 && insertIndex < closestStops.length) {
-        closestStops.splice(insertIndex, 0, { stopId, angle });
-        if (closestStops.length > maxClosestStops) {
-          closestStops.length = maxClosestStops;
-        }
-      }
-    }
-
-    transitInfo.closestStops = closestStops.map(elem => elem.stopId);
-  }
-
-  return transitInfo;
+  return builder.build();
 }
+*/
 
 async function getWeatherCurrent(apiKey: string, { station }: { station: string }): Promise<WeatherConditions> {
   const response = await fetch(`https://api.weather.gov/stations/${station}/observations/latest`, {
@@ -534,7 +433,7 @@ interface Env {
 }
 
 const app = new Hono<{ Bindings: Env }>()
-  .get(
+  /*.get(
     "/bustimes",
     zValidator(
       "query",
@@ -552,7 +451,7 @@ const app = new Hono<{ Bindings: Env }>()
         lon: z.coerce.number(),
       })
     ),
-    async (c) => c.json(await getTransitInfo(c.req.valid("query"))))
+    async (c) => c.json(await getTransitInfo(c.req.valid("query"))))*/
   .get(
     "/weather",
     zValidator(
@@ -593,6 +492,7 @@ const app = new Hono<{ Bindings: Env }>()
     ),
     async (c) => c.json(await getReverseGeocode(c.env.OSM_NOMINATIM_USER_AGENT, c.env.WEATHER_API_KEY, c.req.valid("query"))))
   .get("/realtime", getGtfsRealtime)
+  .get("/gtfs", getGtfsStatic)
   ;
 
 export default app;

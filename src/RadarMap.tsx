@@ -80,7 +80,9 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
         const currentMap = olMapRef.current;
         if (currentMap) {
           currentMap.getAllLayers().forEach((layer) => {
-            layer.getSource()?.refresh();
+            if (layer instanceof ImageLayer) {
+              layer.getSource()?.refresh();
+            }
           });
         }
       }, 10 * 60 * 1000);
