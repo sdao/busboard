@@ -1,18 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { useEffect, useState } from "react";
+import { useTime } from "./hooks";
 import "./MinutesDisplay.css";
 
 export default function MinutesDisplay({ hasLeftTerminus, targetTime }: { hasLeftTerminus: boolean, targetTime: Temporal.Instant }) {
-  const [, setCount] = useState(0);
-
-  // Force a re-render every 5 seconds to keep the remaining time up-to-date
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setCount((val) => val + 1);
-    }, 5 * 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
+  const now = useTime(5 * 1000); // Force a re-render every 5 seconds to keep the remaining time up-to-date
 
   const classes = ["minutes-until"];
   if (hasLeftTerminus) {
@@ -22,7 +13,6 @@ export default function MinutesDisplay({ hasLeftTerminus, targetTime }: { hasLef
     classes.push("has-not-left-terminus");
   }
 
-  const now = Temporal.Now.instant();
   const minutes = Math.floor(now.until(targetTime).total("minutes"));
   if (minutes >= 0) {
     if (minutes <= 3) {

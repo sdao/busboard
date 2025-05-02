@@ -22,66 +22,6 @@ export function getReverseGeocodeQuery(lat: number, lon: number) {
     });
 }
 
-/*
-export function getTransitInfoQuery(lat: number, lon: number) {
-    return queryOptions({
-        queryKey: ["transitInfo", lat, lon],
-        queryFn: async () => {
-            console.log(`Fetching transit info for ${lat}, ${lon}...`);
-
-            const response = await client.transitinfo.$get({ query: { lat: String(lat), lon: String(lon) } });
-            const result: TransitSystemInfo = await response.json();
-            console.info(`Received transit info: ${result.routes.length} routes; ${result.closestStops} closest stops`);
-            return result;
-        },
-        retry: true
-    });
-}
-
-export function getBusTimesQuery(transitInfo?: TransitSystemInfo) {
-    return queryOptions({
-        queryKey: ["busTimes", transitInfo?.closestStops],
-        queryFn: async () => {
-            if (transitInfo !== undefined && transitInfo.closestStops.length !== 0) {
-                console.log(`Fetching bus times for ${transitInfo.closestStops}...`);
-
-                const stops = transitInfo.closestStops.join(",");
-                const response = await client.bustimes.$get({ query: { stops } });
-                const result: BusTimes = await response.json();
-                console.info(`Received bus times: ${result.stops.length} stops`);
-                return result;
-            }
-
-            return { stops: [] };
-        },
-        enabled: transitInfo !== undefined,
-        refetchInterval: (query) => {
-            if (query.state.data !== undefined) {
-                // If there are no more scheduled buses for the night, throttle updates to every ten minutes
-                const anyBusesScheduled = (busTimes: BusTimes) => {
-                    for (const stop of busTimes.stops) {
-                        for (const route of stop.routes) {
-                            for (const dir of route.directions) {
-                                if (dir.nextInstances.length !== 0) {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                    return false;
-                };
-
-                if (!anyBusesScheduled(query.state.data)) {
-                    return 10 * 60 * 1000;
-                }
-            }
-
-            return 1 * 60 * 1000;
-        }
-    });
-}
-*/
-
 export function getGtfsStaticQuery(lat: number, lon: number) {
     return queryOptions({
         queryKey: ["gtfsStatic", lat, lon],

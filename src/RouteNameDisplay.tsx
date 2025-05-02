@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { DirectionId, RouteId, TransitSystemInfo } from "../shared/types";
 
-export default function RouteNameDisplay({ routeId, directionId, transitInfo }: { routeId: RouteId, directionId: DirectionId, transitInfo: TransitSystemInfo | null }) {
+export default memo(function RouteNameDisplay({ routeId, directionId, transitInfo }: { routeId: RouteId, directionId: DirectionId, transitInfo: TransitSystemInfo | null }) {
   function abbreviate(n: string) {
     // If `n` is all upper-case, convert it to title case
     if (n.toUpperCase() === n) {
@@ -55,4 +56,4 @@ export default function RouteNameDisplay({ routeId, directionId, transitInfo }: 
   }
 
   return <>{name}</>;
-}
+});

@@ -1,11 +1,19 @@
+import { useMemo } from "react";
 import SunCalc from "suncalc";
 
 import { WeatherConditions } from "../shared/types";
 import "./WeatherEmoji.css"
+import { useTime } from "./hooks";
 
 export default function WeatherEmoji({ current, lat, lon }: { current: WeatherConditions, lat: number, lon: number }) {
-  function getEmoji(text: string) {
-    const lowerText = text.toLowerCase();
+  const now = useTime(60 * 1000);
+
+  const emoji = useMemo(() => {
+    if (current.description.length === 0) {
+      return null;
+    }
+
+    const lowerText = current.description.toLowerCase();
     if (lowerText.includes("snow") || lowerText.includes("blizzard")) {
       return '❄️';
     }
@@ -37,7 +45,7 @@ export default function WeatherEmoji({ current, lat, lon }: { current: WeatherCo
       return '🌫️';
     }
     else {
-      const nowDate = new Date();
+      const nowDate = new Date(now.epochMilliseconds);
       const times = SunCalc.getTimes(nowDate, lat, lon);
       if (nowDate > times.sunrise && nowDate < times.sunset) {
         return '🌞';
@@ -46,10 +54,10 @@ export default function WeatherEmoji({ current, lat, lon }: { current: WeatherCo
         return '🌛';
       }
     }
-  }
+  }, [current.description, lat, lon, now.epochMilliseconds]);
 
-  if (current.description.length !== 0) {
-    return <div className="weather-emoji">{getEmoji(current.description)}</div>;
+  if (emoji !== null) {
+    return <div className="weather-emoji">{emoji}</div>;
   }
   else {
     return <></>;

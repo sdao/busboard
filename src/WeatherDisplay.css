@@ -26,11 +26,11 @@
 }
 
 .weather-description:has(> :nth-child(2):last-child) {
-	animation: 30s linear infinite scroll-in-2;
+	animation: 30s ease-in-out infinite scroll-in-2;
 }
 
 .weather-description:has(> :nth-child(3):last-child) {
-	animation: 45s linear infinite scroll-in-3;
+	animation: 45s ease-in-out infinite scroll-in-3;
 }
 
 .weather-description>div {

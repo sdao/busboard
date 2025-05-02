@@ -7,17 +7,17 @@
 .minutes-display:first-child:not(:last-child):after {
 	content: ", ";
 	font-size: 1.1em;
-	font-weight: 400;
+	font-weight: 500;
 }
 
 .minutes-until {
 	font-size: 1.1em;
-	font-weight: 800;
+	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 }
 
 .has-not-left-terminus {
-	font-weight: 400;
+	font-weight: 300;
 }
 
 .imminent {

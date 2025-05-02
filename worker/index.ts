@@ -133,44 +133,6 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
   return { lat, lon, zip, weatherTile, weatherStation };
 }
 
-/*
-async function getBusTimes({ stops }: { stops: string }): Promise<BusTimes> {
-  const stopsList = stops.split(",");
-
-  const response = await fetch("https://data.texas.gov/download/mqtr-wwpy/text%2Fplain");
-
-  const { ok, headers } = response;
-  if (!ok) {
-    throw new HTTPException(undefined, { message: `<${response.url}> responded with: ${response.status}` });
-  }
-
-  const contentType = headers.get("content-type") || "";
-  if (!contentType.includes("application/octet-stream")) {
-    throw new HTTPException(undefined, { message: `<${response.url}> did not respond with octet-stream content` });
-  }
-
-  let payload: unknown;
-  try {
-    const jsonString = new TextDecoder("utf-8").decode(await response.arrayBuffer());
-    payload = JSON.parse(jsonString) as unknown;
-  }
-  catch (e) {
-    throw new HTTPException(undefined, { message: `<${response.url}> error parsing JSON: ${e}`, cause: e });
-  }
-
-  let builder;
-  try {
-    builder = BusTimesBuilder.createFromJson(stopsList, payload);
-  }
-  catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    throw new HTTPException(undefined, { message: `<${response.url}> response has malformed JSON: ${message}`, cause: e});
-  }
-
-  return builder.build();
-}
-*/
-
 async function getGtfsStatic(): Promise<Response> {
   const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
   const newResponse = new Response(response.body, response);
@@ -184,41 +146,6 @@ async function getGtfsRealtime(): Promise<Response> {
   newResponse.headers.set("Cache-Control", "max-age=30");
   return newResponse;
 }
-
-/*
-async function getTransitInfo({ lat, lon }: { lat: number, lon: number }): Promise<TransitSystemInfo> {
-  const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
-
-  const { ok, headers } = response;
-  if (!ok) {
-    throw new HTTPException(undefined, { message: `<${response.url}> responded with: ${response.status}` });
-  }
-
-  const contentType = headers.get("content-type") || "";
-  if (!contentType.includes("application/octet-stream")) {
-    throw new HTTPException(undefined, { message: `<${response.url}> did not respond with octet-stream content` });
-  }
-
-  let zipData;
-  try {
-    zipData = await response.arrayBuffer();
-  }
-  catch (e) {
-    throw new HTTPException(undefined, { message: `Error reading ZIP archive: ${e}`, cause: e });
-  }
-
-  let builder;
-  try {
-    builder = await TransitSystemInfoBuilder.createFromGtfsZip(lat, lon, zipData);
-  }
-  catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    throw new HTTPException(undefined, { message: `<${response.url}> response has malformed GTFS zip archive: ${message}`, cause: e});
-  }
-
-  return builder.build();
-}
-*/
 
 async function getWeatherCurrent(apiKey: string, { station }: { station: string }): Promise<WeatherConditions> {
   const response = await fetch(`https://api.weather.gov/stations/${station}/observations/latest`, {
@@ -433,25 +360,6 @@ interface Env {
 }
 
 const app = new Hono<{ Bindings: Env }>()
-  /*.get(
-    "/bustimes",
-    zValidator(
-      "query",
-      z.object({
-        stops: z.string(),
-      })
-    ),
-    async (c) => c.json(await getBusTimes(c.req.valid("query"))))
-  .get(
-    "/transitinfo",
-    zValidator(
-      "query",
-      z.object({
-        lat: z.coerce.number(),
-        lon: z.coerce.number(),
-      })
-    ),
-    async (c) => c.json(await getTransitInfo(c.req.valid("query"))))*/
   .get(
     "/weather",
     zValidator(

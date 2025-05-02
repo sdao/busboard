@@ -16,7 +16,7 @@ export default function WeatherDisplay({ current, forecast, uvForecast, lat, lon
       <div className="weather-description">
         {current !== null ? <WeatherShortDesc current={current} /> : <></>}
         {forecast !== null ? <WeatherHighLowTemp forecast={forecast} /> : <></>}
-        {uvForecast !== null ? <WeatherUvDescription uvForecast={uvForecast} /> : <></>}
+        {uvForecast !== null ? <WeatherUvDescription uvForecast={uvForecast} lat={lat} lon={lon} /> : <></>}
       </div>
       {current !== null ? <div>{celsiusToFahrenheit(current.temperature)}&deg;F</div> : <div></div>}
     </>
