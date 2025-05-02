@@ -25,7 +25,10 @@ export default function MinutesDisplay({ hasLeftTerminus, targetTime }: { hasLef
       classes.push("soon");
     }
 
-    return <span className="minutes-display"><span className={classes.join(" ")}>{minutes}</span></span>;
+    // Pad each minutes indicator to at least two characters.
+    // Most of the time the minutes are either one or two digits, so this prevents most pops.
+    const minutesString = minutes < 10 ? `\u2007${minutes}` : String(minutes);
+    return <span className="minutes-display"><span className={classes.join(" ")}>{minutesString}</span></span>;
   }
   else {
     return <></>;
