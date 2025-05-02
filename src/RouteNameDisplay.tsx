@@ -30,11 +30,14 @@ export default memo(function RouteNameDisplay({ routeId, directionId, transitInf
       n = titleCase;
     }
 
-    // Abbreviate some common words
-    return n.replace(/\bAvenue\b/ig, "Av")
+    // Abbreviate some common words and insert nbsp's into phrases
+    return n
+      .replace(/\bBus Plaza\b/ig, "Bus\xa0Plaza")
+      .replace(/\bTransit Center\b/ig, "Transit\xa0Center")
+      .replace(/\bAvenue\b/ig, "Av")
       .replace(/\bBoulevard\b/ig, "Blvd")
       .replace(/\bCenter\b/ig, "Ctr")
-      .replace(/\bPark.+Ride\b/ig, "P+R")
+      .replace(/\bPark.+Ride\b/ig, "P&R")
       .replace(/\bParkway\b/ig, "Pkwy")
       .replace(/\bPlace\b/ig, "Pl")
       .replace(/\bPlaza\b/ig, "Plz")
