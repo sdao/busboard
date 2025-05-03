@@ -6,17 +6,18 @@
 /* Show a comma after the first instance but not if it's the only instance */
 .minutes-display:first-child:not(:last-child):after {
 	content: ", ";
-	font-size: 1.1em;
 	font-weight: 500;
 }
 
 .minutes-until {
-	font-size: 1.1em;
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
+	vertical-align: middle;
 }
 
 .has-not-left-terminus {
+	font-size: 0.95em;
+	letter-spacing: 0.025em;
 	font-weight: 300;
 }
 

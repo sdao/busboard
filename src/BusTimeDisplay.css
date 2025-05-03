@@ -8,6 +8,8 @@
 
 .bustime-minutes-display-list {
     white-space: nowrap;
+	font-size: 1.1em;
+	min-width: 5ch;
 }
 
 .bustime-minutes-display-list:empty::after {
