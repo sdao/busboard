@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useSyncExternalStore } from "react"
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Temporal } from "@js-temporal/polyfill";
 
 import { getGtfsRealtimeQuery, getGtfsStaticQuery, getReverseGeocodeQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
+import { useQueryResultLog } from "./hooks";
 import BusTimeDisplay from "./BusTimeDisplay";
 import RadarMap from "./RadarMap";
 import WeatherDisplay from "./WeatherDisplay";
@@ -47,13 +48,12 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));
 
-  useEffect(() => {
-    for (const failureReason of [reverseGeocode.failureReason, transitInfo.failureReason, busTimes.failureReason, weatherCurrent.failureReason, weatherForecast.failureReason, uvForecast.failureReason]) {
-      if (failureReason !== null) {
-        console.error(failureReason);
-      }
-    }
-  }, [reverseGeocode.failureReason, transitInfo.failureReason, busTimes.failureReason, weatherCurrent.failureReason, weatherForecast.failureReason, uvForecast.failureReason]);
+  useQueryResultLog(reverseGeocode);
+  useQueryResultLog(transitInfo);
+  useQueryResultLog(busTimes);
+  useQueryResultLog(weatherCurrent);
+  useQueryResultLog(weatherForecast);
+  useQueryResultLog(uvForecast);
 
   // Build rows for each stop/route/direction
   const rows = [];
@@ -126,22 +126,14 @@ const queryClient = new QueryClient({
 function App() {
   const [lat, setLat] = useState(30.2649);
   const [lon, setLon] = useState(-97.7472);
-  const [isFullscreen, setFullscreen] = useState(false);
 
-  // Fullscreen detection effect
-  useEffect(() => {
-    const onFullscreenChange = () => {
-      if (document.fullscreenElement) {
-        setFullscreen(true);
-      }
-      else {
-        setFullscreen(false);
-      }
-    };
-
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
+  const isFullscreen = useSyncExternalStore(
+    callback => {
+      document.addEventListener("fullscreenchange", callback);
+      return () => document.removeEventListener("fullscreenchange", callback);
+    },
+    // eslint-disable-next-line compat/compat
+    () => document.fullscreenElement !== null);
 
   // Wakelock effect
   useEffect(() => {
