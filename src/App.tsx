@@ -123,17 +123,21 @@ const queryClient = new QueryClient({
   },
 });
 
+function isFullscreenSubscribe(callback: () => void) {
+  document.addEventListener("fullscreenchange", callback);
+  return () => document.removeEventListener("fullscreenchange", callback);
+}
+
+function isFullscreenGetSnapshot() {
+  // eslint-disable-next-line compat/compat
+  return document.fullscreenElement !== null;
+}
+
 function App() {
   const [lat, setLat] = useState(30.2649);
   const [lon, setLon] = useState(-97.7472);
 
-  const isFullscreen = useSyncExternalStore(
-    callback => {
-      document.addEventListener("fullscreenchange", callback);
-      return () => document.removeEventListener("fullscreenchange", callback);
-    },
-    // eslint-disable-next-line compat/compat
-    () => document.fullscreenElement !== null);
+  const isFullscreen = useSyncExternalStore(isFullscreenSubscribe, isFullscreenGetSnapshot);
 
   // Wakelock effect
   useEffect(() => {
