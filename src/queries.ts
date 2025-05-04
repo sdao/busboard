@@ -14,6 +14,10 @@ export function getReverseGeocodeQuery(lat: number, lon: number) {
             console.log(`Fetching reverse geocode for ${lat}, ${lon}...`);
 
             const response = await client.geo.$get({ query: { lat: String(lat), lon: String(lon) } });
+            if (!response.ok) {
+                throw new Error(`Error fetching reverse geocode (response status ${response.status} ${response.statusText})`);
+            }
+
             const result: ReverseGeocode = await response.json();
             console.info(`Received reverse geocode: ${result.zip},${result.weatherStation},${result.weatherTile.wfo},${result.weatherTile.x},${result.weatherTile.y}`);
             return result;
@@ -29,6 +33,10 @@ export function getGtfsStaticQuery(lat: number, lon: number) {
             console.log(`Fetching GTFS-Static for ${lat}, ${lon}...`);
 
             const response = await client.gtfs.$get();
+            if (!response.ok) {
+                throw new Error(`Error fetching GTFS-Static (response status ${response.status} ${response.statusText})`);
+            }
+
             const builder = await TransitSystemInfoBuilder.createFromGtfsZip(lat, lon, await response.arrayBuffer());
             const transitInfo = builder.build();
 
@@ -47,6 +55,10 @@ export function getGtfsRealtimeQuery(transitInfo?: TransitSystemInfo) {
                 console.log(`Fetching GTFS-Realtime for ${transitInfo.closestStops}...`);
 
                 const response = await client.realtime.$get();
+                if (!response.ok) {
+                    throw new Error(`Error fetching GTFS-Realtime (response status ${response.status} ${response.statusText})`);
+                }
+
                 const builder = BusTimesBuilder.createFromProtobuf(transitInfo.closestStops, await response.arrayBuffer());
                 const busTimes = builder.build();
                 
@@ -91,6 +103,10 @@ export function getWeatherCurrentQuery(reverseGeocode?: ReverseGeocode) {
                 console.log(`Fetching current weather for ${reverseGeocode.weatherStation}...`);
 
                 const response = await client.weather.$get({ query: { station: reverseGeocode.weatherStation } });
+                if (!response.ok) {
+                    throw new Error(`Error fetching current weather (response status ${response.status} ${response.statusText})`);
+                }
+
                 const result: WeatherConditions = await response.json();
                 console.info(`Received current weather: ${result.description}, ${result.temperature}`);
                 return result;
@@ -112,6 +128,10 @@ export function getWeatherForecastQuery(reverseGeocode?: ReverseGeocode) {
                 console.log(`Fetching weather forecast for ${weatherTile.wfo},${weatherTile.x},${weatherTile.y}...`);
 
                 const response = await client.forecast.$get({ query: { wfo: weatherTile.wfo, x: String(weatherTile.x), y: String(weatherTile.y) } });
+                if (!response.ok) {
+                    throw new Error(`Error fetching weather forecast (response status ${response.status} ${response.statusText})`);
+                }
+
                 const result: WeatherForecast = await response.json();
                 console.info(`Received weather forecast: high ${result.highTemperature}, low ${result.lowTemperature}, precip ${result.chancePrecipitation}`);
                 return result;
@@ -132,6 +152,10 @@ export function getUvForecastQuery(reverseGeocode?: ReverseGeocode) {
                 console.log(`Fetching UV for ${reverseGeocode.zip}...`);
 
                 const response = await client.uv.$get({ query: {  zip: reverseGeocode.zip } });
+                if (!response.ok) {
+                    throw new Error(`Error fetching UV (response status ${response.status} ${response.statusText})`);
+                }
+
                 const result: UvForecastDay = await response.json();
                 console.info(`Received UV: ${result.forecasts.length} time segments`);
                 return result;

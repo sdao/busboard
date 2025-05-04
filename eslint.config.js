@@ -24,13 +24,6 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
-    },
-    settings: {
-      polyfills: [
-        "URL",
-        "URLSearchParams",
-        "fetch"
-      ]
     }
   },
 )

@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 export function useTime(refreshMilliseconds: number) {
@@ -14,12 +13,4 @@ export function useTime(refreshMilliseconds: number) {
     }, [refreshMilliseconds]);
 
     return time;
-}
-
-export function useQueryResultLog(queryResult: UseQueryResult) {
-    useEffect(() => {
-        if (queryResult.failureReason !== null) {
-            console.error(queryResult.failureReason);
-        }
-    }, [queryResult.failureReason]);
 }

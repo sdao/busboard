@@ -47,6 +47,11 @@ main:empty {
 	display: none;
 }
 
+footer {
+	font-size: 0.5em;
+	font-weight: 400;
+}
+
 article {
 	display: flex;
 	align-items: center;
@@ -114,4 +119,14 @@ section.radar>article {
 section.radar>article>div {
 	height: 100%;
 	margin: 0;
+}
+
+footer article {
+	padding: 0.5em 2em;
+	text-align: center;
+	background: hsla(0, 100%, 50%, 0.2);
+}
+
+footer article em {
+	font-weight: 300;
 }

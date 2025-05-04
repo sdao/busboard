@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useSyncExternalStore } from "react"
-import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useQuery, useQueryClient, QueryClient, QueryClientProvider, UseQueryResult } from "@tanstack/react-query";
 import { Temporal } from "@js-temporal/polyfill";
 
 import { getGtfsRealtimeQuery, getGtfsStaticQuery, getReverseGeocodeQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
-import { useQueryResultLog } from "./hooks";
 import BusTimeDisplay from "./BusTimeDisplay";
 import RadarMap from "./RadarMap";
 import WeatherDisplay from "./WeatherDisplay";
@@ -38,6 +37,22 @@ function AutoHideMouseCursor(props: React.PropsWithChildren) {
   return <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>{props.children}</div>;
 }
 
+function DisplayQueryError({ useQueryResult }: { useQueryResult: UseQueryResult }) {
+  useEffect(() => {
+    if (useQueryResult.failureReason !== null) {
+      console.error(useQueryResult.failureReason);
+    }
+  }, [useQueryResult.failureReason]);
+
+  if (useQueryResult.failureReason === null) {
+    return <></>;
+  }
+  else {
+    const time = useQueryResult.dataUpdatedAt == 0 ? "never" : `at  ${Temporal.Instant.fromEpochMilliseconds(useQueryResult.dataUpdatedAt).toLocaleString()}`;
+    return <article><span>{useQueryResult.failureReason.message} <em>last updated {time}</em></span></article>;
+  }
+}
+
 function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   // Query hooks
   useQueryClient();
@@ -47,13 +62,6 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   const weatherCurrent = useQuery(getWeatherCurrentQuery(reverseGeocode.data));
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));
-
-  useQueryResultLog(reverseGeocode);
-  useQueryResultLog(transitInfo);
-  useQueryResultLog(busTimes);
-  useQueryResultLog(weatherCurrent);
-  useQueryResultLog(weatherForecast);
-  useQueryResultLog(uvForecast);
 
   // Build rows for each stop/route/direction
   const rows = [];
@@ -109,6 +117,14 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
           )
           : <></>}
       </main>
+      <footer>
+        <DisplayQueryError useQueryResult={reverseGeocode} />
+        <DisplayQueryError useQueryResult={transitInfo} />
+        <DisplayQueryError useQueryResult={busTimes} />
+        <DisplayQueryError useQueryResult={weatherCurrent} />
+        <DisplayQueryError useQueryResult={weatherForecast} />
+        <DisplayQueryError useQueryResult={uvForecast} />
+      </footer>
     </>
   );
 }
