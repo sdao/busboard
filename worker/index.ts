@@ -11,6 +11,12 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
       headers: {
         "user-agent": userAgent
+      },
+      cf: {
+        "cacheEverything": true,
+        "cacheTtlByStatus": {
+          "200-299": 86400 // cache successful responses for 1 day
+        }
       }
     });
 
@@ -48,6 +54,9 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
     const response = await fetch(`https://api.weather.gov/points/${lat},${lon}`, {
       headers: {
         "user-agent": weatherApiKey
+      },
+      cf: {
+        "cacheEverything": true
       }
     });
 
@@ -94,6 +103,9 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
     const response = await fetch(observationStationsUri, {
       headers: {
         "user-agent": weatherApiKey
+      },
+      cf: {
+        "cacheEverything": true
       }
     });
 
@@ -134,7 +146,14 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
 }
 
 async function getGtfsStatic(): Promise<Response> {
-  const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip");
+  const response = await fetch("https://data.texas.gov/download/r4v4-vz24/application%2Fzip", {
+    cf: {
+      "cacheEverything": true,
+      "cacheTtlByStatus": {
+        "200-299": 86400 // cache successful responses for 1 day
+      }
+    }
+  });
   const newResponse = new Response(response.body, response);
   newResponse.headers.set("Cache-Control", "max-age=3600");
   return newResponse;
@@ -292,7 +311,14 @@ async function getWeatherForecast(apiKey: string, { wfo, x, y }: { wfo: string, 
 }
 
 async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay> {
-  const response = await fetch(`https://data.epa.gov/efservice/getEnvirofactsUVHOURLY/ZIP/${zip}/JSON`);
+  const response = await fetch(`https://data.epa.gov/efservice/getEnvirofactsUVHOURLY/ZIP/${zip}/JSON`, {
+    cf: {
+      "cacheEverything": true,
+      "cacheTtlByStatus": {
+        "200-299": 3600 // cache successful responses for 1 hour
+      }
+    }
+  });
 
   const { ok, headers } = response;
   if (!ok) {
