@@ -379,12 +379,6 @@ async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay
   return { forecasts };
 }
 
-// XXX: not sure why building doesn't work without this
-interface Env {
-  WEATHER_API_KEY: string;
-  OSM_NOMINATIM_USER_AGENT: string;
-}
-
 const app = new Hono<{ Bindings: Env }>()
   .get(
     "/weather",

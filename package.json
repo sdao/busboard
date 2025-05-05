@@ -42,7 +42,7 @@
 		"typescript": "~5.7.2",
 		"typescript-eslint": "^8.24.1",
 		"vite": "^6.2.0",
-		"wrangler": "^4.12.0"
+		"wrangler": "^4.14.0"
 	},
 	"browserslist": [
 		">= 0.5% in US and not dead"
