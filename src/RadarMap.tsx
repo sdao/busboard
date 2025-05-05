@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 import OLMap from "ol/Map";
 import OLView from "ol/View";
 import Attribution from "ol/control/Attribution";
-import TileLayer from "ol/layer/Tile";
-import { Source } from "ol/source";
+import ImageLayer from "ol/layer/Image";
+import ImageWMS from "ol/source/ImageWMS";
 import { fromLonLat } from "ol/proj";
-import olms from 'ol-mapbox-style';
+import olms, { getLayer } from "ol-mapbox-style";
 import versatiles from "./assets/versatiles-eclipse.json?url";
 import "ol/ol.css";
 import "./RadarMap.css"
@@ -20,23 +20,7 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
     if (node) {
       const map = new OLMap({
         target: node,
-        layers: [
-          // Use GetCapabilities to see what layers are available:
-          // <https://nowcoast.noaa.gov/geoserver/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities>
-          //
-          // Uncomment the layer below and use DevTools Network pane to see what requests are being made.
-          // Find the GetMap request and change the WIDTH/HEIGHT to the tilesize in the style json and the BBOX to the placeholder:
-          // <https://nowcoast.noaa.gov/geoserver/ows?service=wms&REQUEST=GetMap&SERVICE=WMS&VERSION=1.3.0&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=weather_radar:conus_base_reflectivity_mosaic&WIDTH=256&HEIGHT=256&CRS=EPSG:3857&BBOX={bbox-epsg-3857}>
-          //
-          // new ImageLayer({
-          //   source: new ImageWMS({
-          //     url: 'https://nowcoast.noaa.gov/geoserver/ows?service=wms',
-          //     params: { 'LAYERS': 'weather_radar:conus_base_reflectivity_mosaic' },
-          //     ratio: 1,
-          //     serverType: 'geoserver',
-          //   }),
-          // }),
-        ],
+        layers: [],
         view: new OLView({
           zoom: 10
         }),
@@ -44,23 +28,41 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
       });
 
       // Periodically refresh the map
+      // This can happen a bit eagerly because the image requests will be cached by the browser
       const refreshIntervalId = window.setInterval(() => {
         map.getAllLayers().forEach((layer) => {
-          if (layer instanceof TileLayer) {
-            const source = layer.getSource() as unknown;
-            if (source instanceof Source) {
-              source.refresh();
-            }
+          if (layer instanceof ImageLayer) {
+            layer.getSource()?.refresh();
           }
         });
-      }, 10 * 60 * 1000);
+      }, 2 * 60 * 1000);
 
       // Respond to the map div resizing
       const observer = new ResizeObserver(() => map.updateSize());
       observer.observe(node);
 
       // Asynchronously load the style for the vector map and raster radar layers
-      olms(map, versatiles);
+      // The raster radar layer is inserted into the layer stack by finding a special placeholder
+      // in the mapbox style
+      olms(map, versatiles).then(() => {
+        const placeholderLayer = getLayer(map, "radar-placeholder");
+        if (placeholderLayer) {
+          const layers = map.getLayers();
+          for (let i = 0; i < layers.getLength(); ++i) {
+            if (layers.item(i) === placeholderLayer) {
+              layers.insertAt(i, new ImageLayer({
+                source: new ImageWMS({
+                  url: 'https://nowcoast.noaa.gov/geoserver/ows?service=wms',
+                  params: { 'LAYERS': 'weather_radar:conus_base_reflectivity_mosaic' },
+                  ratio: 1,
+                  serverType: 'geoserver',
+                })
+              }));
+              break;
+            }
+          }
+        }
+      });
 
       olMapRef.current = map;
       return () => {
