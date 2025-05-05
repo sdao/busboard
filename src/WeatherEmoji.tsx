@@ -46,8 +46,8 @@ export default function WeatherEmoji({ current, lat, lon }: { current: WeatherCo
     }
     else {
       const nowDate = new Date(now.epochMilliseconds);
-      const times = SunCalc.getTimes(nowDate, lat, lon);
-      if (nowDate > times.sunrise && nowDate < times.sunset) {
+      const sunPosition = SunCalc.getPosition(nowDate, lat, lon);
+      if (sunPosition.altitude > 0) {
         return '🌞';
       }
       else {

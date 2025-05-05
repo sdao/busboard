@@ -10,8 +10,8 @@ export default function WeatherUvDescription({ uvForecast, lat, lon }: { uvForec
   const uvDesc = useMemo(() => {
     // Only show UV forecast during the daytime
     const nowDate = new Date(now.epochMilliseconds);
-    const times = SunCalc.getTimes(nowDate, lat, lon);
-    if (nowDate < times.sunrise || nowDate > times.sunset) {
+    const sunPosition = SunCalc.getPosition(nowDate, lat, lon);
+    if (sunPosition.altitude <= 0) {
       return null;
     }
 
