@@ -58,7 +58,7 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
                   serverType: 'geoserver',
                   attributions: 'NOAA',
                 }),
-                opacity: 0.6,
+                opacity: 0.7,
               }));
               break;
             }

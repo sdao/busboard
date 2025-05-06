@@ -4301,7 +4301,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 14, 12 ] ] },
+				"text-size": { "stops": [ [ 14, 16 ] ] },
 				"text-transform": "uppercase"
 			},
 			"paint": {
@@ -4322,7 +4322,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 13, 13 ] ] },
+				"text-size": { "stops": [ [ 13, 17 ] ] },
 				"text-transform": "uppercase"
 			},
 			"paint": {
@@ -4343,7 +4343,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 11, 11 ], [ 13, 14 ] ] },
+				"text-size": { "stops": [ [ 11, 15 ], [ 13, 18 ] ] },
 				"text-transform": "uppercase"
 			},
 			"paint": {
@@ -4364,7 +4364,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 10, 11 ], [ 12, 14 ] ] }
+				"text-size": { "stops": [ [ 10, 15 ], [ 12, 18 ] ] }
 			},
 			"paint": {
 				"icon-color": "rgb(170,178,202)",
@@ -4384,7 +4384,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 9, 11 ], [ 12, 14 ] ] }
+				"text-size": { "stops": [ [ 9, 15 ], [ 12, 18 ] ] }
 			},
 			"paint": {
 				"icon-color": "rgb(170,178,202)",
@@ -4404,7 +4404,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 8, 11 ], [ 12, 14 ] ] }
+				"text-size": { "stops": [ [ 8, 15 ], [ 12, 18 ] ] }
 			},
 			"paint": {
 				"icon-color": "rgb(170,178,202)",
@@ -4449,7 +4449,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 7, 11 ], [ 10, 14 ] ] }
+				"text-size": { "stops": [ [ 7, 15 ], [ 10, 18 ] ] }
 			},
 			"paint": {
 				"icon-color": "rgb(170,178,202)",
@@ -4469,7 +4469,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 6, 11 ], [ 10, 15 ] ] }
+				"text-size": { "stops": [ [ 6, 15 ], [ 10, 19 ] ] }
 			},
 			"paint": {
 				"icon-color": "rgb(170,178,202)",
@@ -4489,7 +4489,7 @@
 			"layout": {
 				"text-field": "{name_en}",
 				"text-font": [ "Radio Canada" ],
-				"text-size": { "stops": [ [ 5, 12 ], [ 10, 16 ] ] }
+				"text-size": { "stops": [ [ 5, 16 ], [ 10, 20 ] ] }
 			},
 			"paint": {
 				"icon-color": "rgb(170,178,202)",
