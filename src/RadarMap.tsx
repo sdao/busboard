@@ -56,7 +56,9 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
                   params: { 'LAYERS': 'weather_radar:conus_base_reflectivity_mosaic' },
                   ratio: 1,
                   serverType: 'geoserver',
-                })
+                  attributions: 'NOAA',
+                }),
+                opacity: 0.6,
               }));
               break;
             }
