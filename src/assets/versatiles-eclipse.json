@@ -13,8 +13,15 @@
 	],
 	"sources": {
 		"versatiles-shortbread": {
+			"attribution": "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
+			"tiles": [
+				"https://tiles.versatiles.org/tiles/osm/{z}/{x}/{y}"
+			],
 			"type": "vector",
-			"url": "https://vector.openstreetmap.org/shortbread_v1/tilejson.json"
+			"scheme": "xyz",
+			"bounds": [ -180, -85.0511287798066, 180, 85.0511287798066 ],
+			"minzoom": 0,
+			"maxzoom": 14
 		}
 	},
 	"layers": [

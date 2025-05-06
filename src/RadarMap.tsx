@@ -7,6 +7,7 @@ import ImageWMS from "ol/source/ImageWMS";
 import { fromLonLat } from "ol/proj";
 import olms, { getLayer } from "ol-mapbox-style";
 import versatiles from "./assets/versatiles-eclipse.json?url";
+import { colorToAlpha, alphaBlendImageData } from "./imageData";
 import "ol/ol.css";
 import "./RadarMap.css"
 
@@ -28,14 +29,13 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
       });
 
       // Periodically refresh the map
-      // This can happen a bit eagerly because the image requests will be cached by the browser
       const refreshIntervalId = window.setInterval(() => {
         map.getAllLayers().forEach((layer) => {
           if (layer instanceof ImageLayer) {
             layer.getSource()?.refresh();
           }
         });
-      }, 2 * 60 * 1000);
+      }, 10 * 60 * 1000);
 
       // Respond to the map div resizing
       const observer = new ResizeObserver(() => map.updateSize());
@@ -50,16 +50,52 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
           const layers = map.getLayers();
           for (let i = 0; i < layers.getLength(); ++i) {
             if (layers.item(i) === placeholderLayer) {
-              layers.insertAt(i, new ImageLayer({
+              const imageLayer = new ImageLayer({
                 source: new ImageWMS({
-                  url: 'https://nowcoast.noaa.gov/geoserver/ows?service=wms',
-                  params: { 'LAYERS': 'weather_radar:conus_base_reflectivity_mosaic' },
+                  // See https://www.weather.gov/gis/
+                  url: 'https://opengeo.ncep.noaa.gov/geoserver/kgrk/ows?service=wms',
+                  params: { 'LAYERS': 'kgrk_sr_bref' },
+                  // url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?service=wms',
+                  // params: { 'LAYERS': 'conus_bref_qcd' },
                   ratio: 1,
                   serverType: 'geoserver',
-                  attributions: 'NOAA',
+                  crossOrigin: 'anonymous',
                 }),
-                opacity: 0.7,
-              }));
+              });
+
+              let baseMapImageData: ImageData | null = null;
+              imageLayer.on("prerender", (event) => {
+                if (!(event.context instanceof CanvasRenderingContext2D)) {
+                  return;
+                }
+
+                const canvas = event.context.canvas;
+                const width = canvas.width;
+                const height = canvas.height;
+                baseMapImageData = event.context.getImageData(0, 0, width, height);
+
+                const emptyImageData = event.context.createImageData(width, height);
+                event.context.putImageData(emptyImageData, 0, 0);
+              });
+
+              imageLayer.on("postrender", (event) => {
+                if (!(event.context instanceof CanvasRenderingContext2D && baseMapImageData)) {
+                  return;
+                }
+
+                const canvas = event.context.canvas;
+                const width = canvas.width;
+                const height = canvas.height;
+                const processedRadarImageData = colorToAlpha(
+                  event.context.getImageData(0, 0, width, height),
+                  { r: 255, g: 255, b: 255 }, 50);
+
+                const compositedImageData = alphaBlendImageData(
+                  processedRadarImageData, 0.8, baseMapImageData);
+                event.context.putImageData(compositedImageData, 0, 0);
+              });
+
+              layers.insertAt(i, imageLayer);
               break;
             }
           }
