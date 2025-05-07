@@ -37,7 +37,7 @@ function AutoHideMouseCursor(props: React.PropsWithChildren) {
   return <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>{props.children}</div>;
 }
 
-function DisplayQueryError({ useQueryResult }: { useQueryResult: UseQueryResult }) {
+function DisplayQueryError({ displayName, useQueryResult }: { displayName: string, useQueryResult: UseQueryResult }) {
   useEffect(() => {
     if (useQueryResult.failureReason !== null) {
       console.error(useQueryResult.failureReason);
@@ -49,7 +49,7 @@ function DisplayQueryError({ useQueryResult }: { useQueryResult: UseQueryResult 
   }
   else {
     const time = useQueryResult.dataUpdatedAt == 0 ? "never" : `at  ${Temporal.Instant.fromEpochMilliseconds(useQueryResult.dataUpdatedAt).toLocaleString()}`;
-    return <article><span>{useQueryResult.failureReason.message} <em>last updated {time}</em></span></article>;
+    return <div><span>{displayName} last updated {time} <em>{useQueryResult.failureReason.message}</em></span></div>;
   }
 }
 
@@ -118,12 +118,12 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
           : <></>}
       </main>
       <footer>
-        <DisplayQueryError useQueryResult={reverseGeocode} />
-        <DisplayQueryError useQueryResult={transitInfo} />
-        <DisplayQueryError useQueryResult={busTimes} />
-        <DisplayQueryError useQueryResult={weatherCurrent} />
-        <DisplayQueryError useQueryResult={weatherForecast} />
-        <DisplayQueryError useQueryResult={uvForecast} />
+        <DisplayQueryError displayName="Location information" useQueryResult={reverseGeocode} />
+        <DisplayQueryError displayName="Transit agency info" useQueryResult={transitInfo} />
+        <DisplayQueryError displayName="Realtime arrivals" useQueryResult={busTimes} />
+        <DisplayQueryError displayName="Current weather" useQueryResult={weatherCurrent} />
+        <DisplayQueryError displayName="Weather forecast" useQueryResult={weatherForecast} />
+        <DisplayQueryError displayName="UV forecast" useQueryResult={uvForecast} />
       </footer>
     </>
   );

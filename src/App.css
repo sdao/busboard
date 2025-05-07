@@ -121,12 +121,16 @@ section.radar>article>div {
 	margin: 0;
 }
 
-footer article {
-	padding: 0.5em 2em;
-	text-align: center;
-	background: hsla(0, 100%, 50%, 0.2);
+footer div {
+	margin: 0.55em 2em;
+	color: hsl(0, 0%, 70%);
 }
 
-footer article em {
+footer div::before {
+	content: '⚠️';
+	margin-right: 0.5em;
+}
+
+footer em {
 	font-weight: 300;
 }
