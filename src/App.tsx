@@ -112,7 +112,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
         {showRadar
           ? (
             <section className="radar">
-              <article><RadarMap lat={lat} lon={lon} /></article>
+              <article><RadarMap lat={lat} lon={lon} radarStation={reverseGeocode.data?.radarStation} /></article>
             </section>
           )
           : <></>}

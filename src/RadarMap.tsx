@@ -7,11 +7,11 @@ import ImageWMS from "ol/source/ImageWMS";
 import { fromLonLat } from "ol/proj";
 import olms, { getLayer } from "ol-mapbox-style";
 import versatiles from "./assets/versatiles-eclipse.json?url";
-import { colorToAlpha, alphaBlendImageData } from "./imageData";
+import { processRadarImage } from "./imageData";
 import "ol/ol.css";
 import "./RadarMap.css"
 
-export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
+export default function RadarMap({ lat, lon, radarStation }: { lat: number, lon: number, radarStation?: string }) {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const olMapRef = useRef<OLMap>(null);
 
@@ -50,49 +50,36 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
           const layers = map.getLayers();
           for (let i = 0; i < layers.getLength(); ++i) {
             if (layers.item(i) === placeholderLayer) {
+              // See https://www.weather.gov/gis/
+              // and https://opengeo.ncep.noaa.gov/geoserver/www/index.html
+              // and https://www.weather.gov/radarfaq
+              //
+              // If we have a known radar station, pull its image directly to use Super-Resolution Base Reflectivity.
+              // Otherwise use the national radar "mosaic", which is a lower resolution but covers all of the US.
+              let url: string, params: { [x: string]: string };
+              if (radarStation) {
+                url = `https://opengeo.ncep.noaa.gov/geoserver/${radarStation.toLowerCase()}/ows?service=wms`;
+                params = { 'LAYERS': `${radarStation.toLowerCase()}_sr_bref` };
+              }
+              else {
+                url = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?service=wms';
+                params = { 'LAYERS': 'conus_bref_qcd' };
+              }
+
               const imageLayer = new ImageLayer({
                 source: new ImageWMS({
-                  // See https://www.weather.gov/gis/
-                  url: 'https://opengeo.ncep.noaa.gov/geoserver/kgrk/ows?service=wms',
-                  params: { 'LAYERS': 'kgrk_sr_bref' },
-                  // url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?service=wms',
-                  // params: { 'LAYERS': 'conus_bref_qcd' },
+                  url,
+                  params,
                   ratio: 1,
                   serverType: 'geoserver',
-                  crossOrigin: 'anonymous',
+                  imageLoadFunction: async (image, src) => {
+                    const imgElem = image.getImage();
+                    if (imgElem instanceof HTMLImageElement || imgElem instanceof HTMLVideoElement) {
+                      imgElem.src = await processRadarImage(src);
+                    }
+                  },
                 }),
-              });
-
-              let baseMapImageData: ImageData | null = null;
-              imageLayer.on("prerender", (event) => {
-                if (!(event.context instanceof CanvasRenderingContext2D)) {
-                  return;
-                }
-
-                const canvas = event.context.canvas;
-                const width = canvas.width;
-                const height = canvas.height;
-                baseMapImageData = event.context.getImageData(0, 0, width, height);
-
-                const emptyImageData = event.context.createImageData(width, height);
-                event.context.putImageData(emptyImageData, 0, 0);
-              });
-
-              imageLayer.on("postrender", (event) => {
-                if (!(event.context instanceof CanvasRenderingContext2D && baseMapImageData)) {
-                  return;
-                }
-
-                const canvas = event.context.canvas;
-                const width = canvas.width;
-                const height = canvas.height;
-                const processedRadarImageData = colorToAlpha(
-                  event.context.getImageData(0, 0, width, height),
-                  { r: 255, g: 255, b: 255 }, 50);
-
-                const compositedImageData = alphaBlendImageData(
-                  processedRadarImageData, 0.8, baseMapImageData);
-                event.context.putImageData(compositedImageData, 0, 0);
+                opacity: 0.8,
               });
 
               layers.insertAt(i, imageLayer);
@@ -111,7 +98,7 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
     }
 
     return () => { };
-  }, []);
+  }, [radarStation]);
 
   // Re-center map
   useEffect(() => {
@@ -119,7 +106,7 @@ export default function RadarMap({ lat, lon }: { lat: number, lon: number }) {
     if (currentMap) {
       currentMap.getView().setCenter(fromLonLat([lon, lat]));
     }
-  }, [lat, lon]);
+  }, [lat, lon, radarStation /* when radarStation changes, map is reconstructed */]);
 
   return <div ref={mapDivRef} style={{ width: '100%', minHeight: '400px' }}></div>;
 };

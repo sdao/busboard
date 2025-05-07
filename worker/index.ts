@@ -142,7 +142,53 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
     }
   }
 
-  return { lat, lon, zip, weatherTile, weatherStation };
+  let radarStation: string | null = null;
+  {
+    const response = await fetch("https://opengeo.ncep.noaa.gov/geoserver/nws/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=nws:radar_sites&outputFormat=application/json");
+    const { ok, headers } = response;
+    if (!ok) {
+      throw new HTTPException(undefined, { message: `<${response.url}> responded with: ${response.status}` });
+    }
+
+    const contentType = headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      throw new HTTPException(undefined, { message: `<${response.url}> did not respond with JSON content` });
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    }
+    catch (e) {
+      throw new HTTPException(undefined, { message: `Error parsing JSON: ${e}`, cause: e });
+    }
+
+    const radars: { radarName: string, distance: number }[] = [];
+    if (typeof payload === "object" && payload !== null &&
+      "features" in payload && Array.isArray(payload.features)) {
+      for (const feature of payload.features as unknown[]) {
+        if (typeof feature === "object" && feature !== null &&
+          "properties" in feature && typeof feature.properties === "object" && feature.properties !== null &&
+          "rda_id" in feature.properties && "lon" in feature.properties && "lat" in feature.properties) {
+          const { rda_id: radarName, lon: radarLon, lat: radarLat } = feature.properties;
+          if (typeof radarName === "string" && typeof radarLon === "number" && typeof radarLat === "number") {
+            // This distance measure isn't exactly correct because lon/lat are not the same distance,
+            // but this is close enough
+            const distance = (radarLon - lon) * (radarLon - lon) + (radarLat - lat) * (radarLat - lat);
+            radars.push({ radarName, distance });
+          }
+        }
+      }
+    }
+
+    if (radars.length == 0) {
+      throw new HTTPException(undefined, { message: `<${response.url}> response is missing radar stations` });
+    }
+
+    radarStation = radars.sort((a, b) => a.distance - b.distance)[0].radarName;
+  }
+
+  return { lat, lon, zip, weatherTile, weatherStation, radarStation };
 }
 
 async function getGtfsStatic(): Promise<Response> {

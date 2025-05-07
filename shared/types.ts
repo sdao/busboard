@@ -13,4 +13,4 @@ export type WeatherConditions = { description: string, temperature: number };
 export type WeatherForecast = { highTemperature: number, lowTemperature: number, chancePrecipitation: number };
 export type UvForecastHour = { uvIndex: number, time: string };
 export type UvForecastDay = { forecasts: UvForecastHour[] };
-export type ReverseGeocode = { lat: number, lon: number, zip: string, weatherTile: { wfo: string, x: number, y: number }, weatherStation: string };
+export type ReverseGeocode = { lat: number, lon: number, zip: string, weatherTile: { wfo: string, x: number, y: number }, weatherStation: string, radarStation: string };
