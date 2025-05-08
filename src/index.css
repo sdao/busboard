@@ -45,11 +45,8 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-body {
-  animation: 60s linear infinite jitter;
-}
-
 @keyframes jitter {
+
   0%,
   100% {
     transform: translateX(-5px) translateY(-5px);
@@ -68,14 +65,11 @@ body {
   }
 }
 
-body>div
-{
-  animation: 900s linear infinite flash-burnin;
-}
-
 @keyframes flash-burnin {
+
   0%,
-  99.8%, /* approx. 599/600 */
+  /* approx. 599/600 */
+  99.8%,
   100% {
     opacity: 1;
   }
@@ -83,4 +77,40 @@ body>div
   99.9% {
     opacity: 0;
   }
+}
+
+@media screen and (max-width: 800px) {
+
+  :root {
+    font-size: 1em;
+  }
+
+  button {
+    font-size: 1em;
+  }
+
+}
+
+@media screen and (min-width: 800px) and (max-width: 1200px) {
+
+  :root {
+    font-size: 2em;
+  }
+
+  button {
+    font-size: 0.5em;
+  }
+
+}
+
+@media screen and (min-width: 800px) {
+
+  body {
+    animation: 60s linear infinite jitter;
+  }
+
+  body>div {
+    animation: 900s linear infinite flash-burnin;
+  }
+
 }
