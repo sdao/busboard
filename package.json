@@ -15,12 +15,12 @@
 	"dependencies": {
 		"@hono/zod-validator": "^0.5.0",
 		"@js-temporal/polyfill": "^0.5.1",
+		"@jsquash/png": "^3.0.1",
 		"@tanstack/react-query": "^5.74.7",
 		"@types/suncalc": "^1.9.2",
 		"eslint-plugin-compat": "^6.0.2",
 		"gtfs-realtime-bindings": "^1.1.1",
 		"hono": "^4.7.8",
-		"jimp": "^1.6.0",
 		"jszip": "^3.10.1",
 		"ol": "^10.5.0",
 		"ol-mapbox-style": "^12.5.0",
