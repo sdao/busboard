@@ -139,6 +139,20 @@ const queryClient = new QueryClient({
   },
 });
 
+function getLocalStorageFloat(key: string) {
+  const str = localStorage.getItem(key);
+  if (!str) {
+    return null;
+  }
+
+  const float = parseFloat(str);
+  if (!isFinite(float)) {
+    return null;
+  }
+
+  return float;
+}
+
 function isFullscreenSubscribe(callback: () => void) {
   document.addEventListener("fullscreenchange", callback);
   return () => document.removeEventListener("fullscreenchange", callback);
@@ -150,8 +164,8 @@ function isFullscreenGetSnapshot() {
 }
 
 function App() {
-  const [lat, setLat] = useState(30.2649);
-  const [lon, setLon] = useState(-97.7472);
+  const [lat, setLat] = useState<number | null>(() => getLocalStorageFloat("lat"));
+  const [lon, setLon] = useState<number | null>(() => getLocalStorageFloat("lon"));
 
   const isFullscreen = useSyncExternalStore(isFullscreenSubscribe, isFullscreenGetSnapshot);
 
@@ -179,16 +193,25 @@ function App() {
       console.log("GEOLCATION SUCCESS!");
       setLat(position.coords.latitude);
       setLon(position.coords.longitude);
+      localStorage.setItem("lat", String(position.coords.latitude));
+      localStorage.setItem("lon", String(position.coords.longitude));
     });
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <AutoHideMouseCursor>
-        <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
-          <button onClick={() => document.body.requestFullscreen()}>Enter Fullscreen</button>
-        </div>
-        <Dashboard lat={lat} lon={lon} />
+        {lat !== null && lon !== null
+          ? (
+            <>
+              <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
+                <button onClick={() => document.body.requestFullscreen()}>Enter Fullscreen</button>
+              </div>
+              <Dashboard lat={lat} lon={lon} />
+            </>
+          )
+          : <div className="toolbar"><div className="loading-spinner" /></div>
+        }
       </AutoHideMouseCursor>
     </QueryClientProvider>
   )

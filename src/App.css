@@ -134,6 +134,29 @@ footer em {
 	font-weight: 300;
 }
 
+.loading-spinner {
+	--loader-size: 2em;
+	--loader-thickness: 0.5em;
+
+	display: inline-block;
+	width: var(--loader-size);
+	padding: var(--loader-thickness);
+	margin: var(--loader-thickness);
+	background: white;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	mask:
+		conic-gradient(transparent, black) subtract,
+		conic-gradient(black 0 0) content-box;
+	animation: loading 2s linear infinite;
+}
+
+@keyframes loading {
+	to {
+		rotate: 1turn
+	}
+}
+
 @media screen and (max-width: 800px) {
 
 	main,
