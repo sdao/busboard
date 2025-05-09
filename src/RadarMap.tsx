@@ -1,112 +1,58 @@
 import { useEffect, useRef } from "react";
-import OLMap from "ol/Map";
-import OLView from "ol/View";
-import Attribution from "ol/control/Attribution";
-import ImageLayer from "ol/layer/Image";
-import ImageWMS from "ol/source/ImageWMS";
-import { fromLonLat } from "ol/proj";
-import olms, { getLayer } from "ol-mapbox-style";
+import Map, { MapRef } from "react-map-gl/maplibre";
+import { addProtocol, removeProtocol } from "maplibre-gl";
 import versatiles from "./assets/versatiles-eclipse.json?url";
 import { processRadarImage } from "./imageData";
-import "ol/ol.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./RadarMap.css"
 
 export default function RadarMap({ lat, lon, radarStation }: { lat: number, lon: number, radarStation?: string }) {
-  const mapDivRef = useRef<HTMLDivElement | null>(null);
-  const olMapRef = useRef<OLMap>(null);
+  const mapRef = useRef<MapRef | null>(null);
 
-  // Insert map
+  // Periodically refresh the map
   useEffect(() => {
-    const node = mapDivRef.current;
-    if (node) {
-      const map = new OLMap({
-        target: node,
-        layers: [],
-        view: new OLView({
-          zoom: 10
-        }),
-        controls: [new Attribution({ collapsible: false })]
-      });
+    const refreshIntervalId = window.setInterval(() => {
+      if (mapRef.current) {
+        mapRef.current.refreshTiles("noaa-ncep-opengeo");
+      }
+    }, 10 * 60 * 1000);
 
-      // Periodically refresh the map
-      const refreshIntervalId = window.setInterval(() => {
-        map.getAllLayers().forEach((layer) => {
-          if (layer instanceof ImageLayer) {
-            layer.getSource()?.refresh();
-          }
-        });
-      }, 10 * 60 * 1000);
+    return () => window.clearInterval(refreshIntervalId);
+  }, []);
 
-      // Respond to the map div resizing
-      const observer = new ResizeObserver(() => map.updateSize());
-      observer.observe(node);
+  // Register a handler for the radar: protocol that downloads the radar image and then processes it
+  // before handing it off to maplibregl
+  useEffect(() => {
+    addProtocol("radar", async (params) => {
+      // See https://www.weather.gov/gis/
+      // and https://opengeo.ncep.noaa.gov/geoserver/www/index.html
+      // and https://www.weather.gov/radarfaq
+      //
+      // If we have a known radar station, pull its image directly to use Super-Resolution Base Reflectivity.
+      // Otherwise use the national radar "mosaic", which is a lower resolution but covers all of the US.
+      // This fills in the template string
+      // radar://opengeo.ncep.noaa.gov/geoserver/{station}/ows?REQUEST=GetMap&SERVICE=WMS&VERSION=1.3.0&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS={layer}&WIDTH=512&HEIGHT=512&CRS=EPSG:3857&BBOX={bbox-epsg-3857}
+      const station = radarStation ? radarStation.toLowerCase() : "conus/conus_bref_qcd";
+      const layer = radarStation ? `${radarStation.toLowerCase()}_sr_bref` : "conus_bref_qcd";
+      const transformedPath = params.url.split("://")[1].replaceAll("{station}", station).replaceAll("{layer}", layer);
+      const url = `https://${transformedPath}`;
+      const processedBuffer = await processRadarImage(url);
+      return { data: processedBuffer };
+    });
 
-      // Asynchronously load the style for the vector map and raster radar layers
-      // The raster radar layer is inserted into the layer stack by finding a special placeholder
-      // in the mapbox style
-      olms(map, versatiles).then(() => {
-        const placeholderLayer = getLayer(map, "radar-placeholder");
-        if (placeholderLayer) {
-          const layers = map.getLayers();
-          for (let i = 0; i < layers.getLength(); ++i) {
-            if (layers.item(i) === placeholderLayer) {
-              // See https://www.weather.gov/gis/
-              // and https://opengeo.ncep.noaa.gov/geoserver/www/index.html
-              // and https://www.weather.gov/radarfaq
-              //
-              // If we have a known radar station, pull its image directly to use Super-Resolution Base Reflectivity.
-              // Otherwise use the national radar "mosaic", which is a lower resolution but covers all of the US.
-              let url: string, params: { [x: string]: string };
-              if (radarStation) {
-                url = `https://opengeo.ncep.noaa.gov/geoserver/${radarStation.toLowerCase()}/ows?service=wms`;
-                params = { 'LAYERS': `${radarStation.toLowerCase()}_sr_bref` };
-              }
-              else {
-                url = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows?service=wms';
-                params = { 'LAYERS': 'conus_bref_qcd' };
-              }
-
-              const imageLayer = new ImageLayer({
-                source: new ImageWMS({
-                  url,
-                  params,
-                  ratio: 1,
-                  serverType: 'geoserver',
-                  imageLoadFunction: async (image, src) => {
-                    const imgElem = image.getImage();
-                    if (imgElem instanceof HTMLImageElement || imgElem instanceof HTMLVideoElement) {
-                      imgElem.src = await processRadarImage(src);
-                    }
-                  },
-                }),
-                opacity: 0.8,
-              });
-
-              layers.insertAt(i, imageLayer);
-              break;
-            }
-          }
-        }
-      });
-
-      olMapRef.current = map;
-      return () => {
-        window.clearInterval(refreshIntervalId);
-        observer.unobserve(node);
-        map.setTarget(undefined);
-      };
+    if (mapRef.current && mapRef.current.getSource("noaa-ncep-opengeo")) {
+      mapRef.current.refreshTiles("noaa-ncep-opengeo");
     }
 
-    return () => { };
+    return () => removeProtocol("radar");
   }, [radarStation]);
 
-  // Re-center map
-  useEffect(() => {
-    const currentMap = olMapRef.current;
-    if (currentMap) {
-      currentMap.getView().setCenter(fromLonLat([lon, lat]));
-    }
-  }, [lat, lon, radarStation /* when radarStation changes, map is reconstructed */]);
-
-  return <div ref={mapDivRef} style={{ width: '100%', minHeight: '400px' }}></div>;
+  return <Map
+    ref={mapRef}
+    longitude={lon}
+    latitude={lat}
+    zoom={9}
+    mapStyle={versatiles}
+    attributionControl={{ compact: false }}
+  />;
 };

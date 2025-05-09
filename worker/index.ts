@@ -464,7 +464,10 @@ const app = new Hono<{ Bindings: Env }>()
         lon: z.coerce.number(),
       })
     ),
-    async (c) => c.json(await getReverseGeocode(c.env.OSM_NOMINATIM_USER_AGENT, c.env.WEATHER_API_KEY, c.req.valid("query"))))
+    async (c) => {
+      c.header("Cache-Control", "max-age=86400")
+      return c.json(await getReverseGeocode(c.env.OSM_NOMINATIM_USER_AGENT, c.env.WEATHER_API_KEY, c.req.valid("query")));
+    })
   .get("/realtime", getGtfsRealtime)
   .get("/gtfs", getGtfsStatic)
   ;

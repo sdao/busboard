@@ -1,15 +1,5 @@
 import { decode, encode } from '@jsquash/png';
 
-/** Gets a base64-encoded data URL for the given blob. */
-function blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(fr.result as string);
-        fr.onerror = (err) => reject(err);
-        fr.readAsDataURL(blob);
-    });
-}
-
 /**
  * Gets the saturation of an RGB color.
  * The saturation is in the range 0.0 (achromatic) to 1.0 (fully saturated).
@@ -63,9 +53,9 @@ function saturationToAlpha(data: Uint8ClampedArray, transparencyThreshold = 0.5,
 /**
  * Downloads a radar image from the given URL and decodes it.
  * Processes the image to make areas with low dBZ values transparent.
- * Then returns it encoded as a data URL containing a PNG.
+ * Then returns it encoded as an ArrayBuffer.
  */
-export async function processRadarImage(src: string): Promise<string> {
+export async function processRadarImage(src: string): Promise<ArrayBuffer> {
     const response = await fetch(src);
     if (!response.ok) {
         throw new Error(`Error loading ${src} (response status ${response.status} ${response.statusText})`);
@@ -76,7 +66,5 @@ export async function processRadarImage(src: string): Promise<string> {
 
     saturationToAlpha(imageData.data);
 
-    const outBuffer = await encode(imageData);
-    const blob = new Blob([outBuffer], { type: "image/png" });
-    return await blobToBase64(blob);
+    return await encode(imageData);
 }

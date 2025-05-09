@@ -1,21 +1,19 @@
-div:has(> .ol-attribution) {
+.maplibregl-control-container {
+	font-family: "Radio Canada", sans-serif;
+	font-size: 0.3rem;
+}
+
+.maplibregl-ctrl-bottom-right {
+	width: 100%;
 	display: flex;
-	align-items: end;
 	justify-content: center;
 }
 
-.ol-attribution {
-	position: initial;
-	border-radius: 4px 0;
-	text-align: center;
-	max-width: 100%;
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+	background: hsla(0, 0%, 0%, 80%);
+	color: hsla(0, 0%, 100%, 60%);
 }
 
-.ol-attribution.ol-uncollapsible {
-	border-radius: 4px 4px 0 0;
-	background-color: black;
-}
-
-.ol-attribution ul {
-	text-shadow: none;
+.maplibregl-ctrl-attrib a {
+	color: hsla(0, 0%, 100%, 80%);
 }

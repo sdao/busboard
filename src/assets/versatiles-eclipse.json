@@ -4,7 +4,7 @@
 	"metadata": {
 		"license": "https://creativecommons.org/publicdomain/zero/1.0/"
 	},
-	"glyphs": "https://tiles.versatiles.org/assets/glyphs/{fontstack}/{range}.pbf",
+	"glyphs": "/glyphs/{fontstack}/{range}.pbf",
 	"sprite": [
 		{
 			"id": "basics",
@@ -22,6 +22,13 @@
 			"bounds": [ -180, -85.0511287798066, 180, 85.0511287798066 ],
 			"minzoom": 0,
 			"maxzoom": 14
+		},
+		"noaa-ncep-opengeo": {
+			"type": "raster",
+			"tileSize": 512,
+			"tiles": [
+				"radar://opengeo.ncep.noaa.gov/geoserver/{station}/ows?REQUEST=GetMap&SERVICE=WMS&VERSION=1.3.0&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS={layer}&WIDTH=512&HEIGHT=512&CRS=EPSG:3857&BBOX={bbox-epsg-3857}"
+			]
 		}
 	},
 	"layers": [
@@ -3794,11 +3801,11 @@
 			}
 		},
 		{
-			"id": "radar-placeholder",
-			"type": "background",
+			"source": "noaa-ncep-opengeo",
+			"id": "noaa-ncep-opengeo-radar",
+			"type": "raster",
 			"paint": {
-				"background-color": "hsl(0,0%,0%)",
-				"background-opacity": 0
+				"raster-opacity": 0.8
 			}
 		},
 		{
@@ -3812,7 +3819,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"icon-image": [ "match", [ "get", "amenity" ], "arts_centre", "basics:icon-art_gallery", "atm", "basics:icon-atm", "bank", "basics:icon-bank", "bar", "basics:icon-bar", "bench", "basics:icon-bench", "bicycle_rental", "basics:icon-bicycle_share", "biergarten", "basics:icon-beergarden", "cafe", "basics:icon-cafe", "car_rental", "basics:icon-car_rental", "car_sharing", "basics:icon-car_rental", "car_wash", "basics:icon-car_wash", "cinema", "basics:icon-cinema", "college", "basics:icon-college", "community_centre", "basics:icon-community", "dentist", "basics:icon-dentist", "doctors", "basics:icon-doctor", "dog_park", "basics:icon-dog_park", "drinking_water", "basics:icon-drinking_water", "embassy", "basics:icon-embassy", "fast_food", "basics:icon-fast_food", "fire_station", "basics:icon-fire_station", "fountain", "basics:icon-fountain", "grave_yard", "basics:icon-cemetery", "hospital", "basics:icon-hospital", "hunting_stand", "basics:icon-huntingstand", "library", "basics:icon-library", "marketplace", "basics:icon-marketplace", "nightclub", "basics:icon-nightclub", "nursing_home", "basics:icon-nursinghome", "pharmacy", "basics:icon-pharmacy", "place_of_worship", "basics:icon-place_of_worship", "playground", "basics:icon-playground", "police", "basics:icon-police", "post_box", "basics:icon-postbox", "post_office", "basics:icon-post", "prison", "basics:icon-prison", "pub", "basics:icon-beer", "recycling", "basics:icon-recycling", "restaurant", "basics:icon-restaurant", "school", "basics:icon-school", "shelter", "basics:icon-shelter", "telephone", "basics:icon-telephone", "theatre", "basics:icon-theatre", "toilets", "basics:icon-toilet", "townhall", "basics:icon-town_hall", "vending_machine", "basics:icon-vendingmachine", "veterinary", "basics:icon-veterinary", "waste_basket", "basics:icon-waste_basket", "" ]
 			},
 			"paint": {
@@ -3833,7 +3840,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"icon-image": [ "match", [ "get", "leisure" ], "golf_course", "basics:icon-golf", "ice_rink", "basics:icon-icerink", "pitch", "basics:icon-pitch", "stadium", "basics:icon-stadium", "swimming_pool", "basics:icon-swimming", "water_park", "basics:icon-waterpark", "basics:icon-sports" ]
 			},
 			"paint": {
@@ -3854,7 +3861,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"icon-image": [ "match", [ "get", "tourism" ], "chalet", "basics:icon-chalet", "information", "basics:transport-information", "picnic_site", "basics:icon-picnic_site", "viewpoint", "basics:icon-viewpoint", "zoo", "basics:icon-zoo", "" ]
 			},
 			"paint": {
@@ -3875,7 +3882,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"icon-image": [ "match", [ "get", "shop" ], "alcohol", "basics:icon-alcohol_shop", "bakery", "basics:icon-bakery", "beauty", "basics:icon-beauty", "beverages", "basics:icon-beverages", "books", "basics:icon-books", "butcher", "basics:icon-butcher", "chemist", "basics:icon-chemist", "clothes", "basics:icon-clothes", "doityourself", "basics:icon-doityourself", "dry_cleaning", "basics:icon-drycleaning", "florist", "basics:icon-florist", "furniture", "basics:icon-furniture", "garden_centre", "basics:icon-garden_centre", "general", "basics:icon-shop", "gift", "basics:icon-gift", "greengrocer", "basics:icon-greengrocer", "hairdresser", "basics:icon-hairdresser", "hardware", "basics:icon-hardware", "jewelry", "basics:icon-jewelry_store", "kiosk", "basics:icon-kiosk", "laundry", "basics:icon-laundry", "newsagent", "basics:icon-newsagent", "optican", "basics:icon-optician", "outdoor", "basics:icon-outdoor", "shoes", "basics:icon-shoes", "sports", "basics:icon-sports", "stationery", "basics:icon-stationery", "toys", "basics:icon-toys", "travel_agency", "basics:icon-travel_agent", "video", "basics:icon-video", "basics:icon-shop" ]
 			},
 			"paint": {
@@ -3896,7 +3903,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"icon-image": [ "match", [ "get", "man_made" ], "lighthouse", "basics:icon-lighthouse", "surveillance", "basics:icon-surveillance", "tower", "basics:icon-observation_tower", "watermill", "basics:icon-watermill", "windmill", "basics:icon-windmill", "" ]
 			},
 			"paint": {
@@ -3917,7 +3924,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"icon-image": [ "match", [ "get", "historic" ], "artwork", "basics:icon-artwork", "castle", "basics:icon-castle", "monument", "basics:icon-monument", "wayside_shrine", "basics:icon-shrine", "basics:icon-historic" ]
 			},
 			"paint": {
@@ -3938,7 +3945,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"icon-image": [ "match", [ "get", "emergency" ], "defibrillator", "basics:icon-defibrillator", "fire_hydrant", "basics:icon-hydrant", "phone", "basics:icon-emergency_phone", "" ]
 			},
 			"paint": {
@@ -3959,7 +3966,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ]
+				"text-font": [ "radio_canada_regular" ]
 			},
 			"paint": {
 				"icon-opacity": { "stops": [ [ 16, 0 ], [ 17, 0.4 ] ] },
@@ -3979,7 +3986,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 19, 0.5 ], [ 20, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-optional": true,
-				"text-font": [ "Radio Canada" ]
+				"text-font": [ "radio_canada_regular" ]
 			},
 			"paint": {
 				"icon-opacity": { "stops": [ [ 16, 0 ], [ 17, 0.4 ] ] },
@@ -4087,7 +4094,7 @@
 			"filter": [ "has", "housenumber" ],
 			"layout": {
 				"text-field": "{housenumber}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "point",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 17, 8 ], [ 19, 10 ] ] }
@@ -4109,7 +4116,7 @@
 			"filter": [ "==", "kind", "motorway" ],
 			"layout": {
 				"text-field": "{ref}",
-				"text-font": [ "Radio Canada Bold" ],
+				"text-font": [ "radio_canada_bold" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 14, 10 ], [ 18, 12 ], [ 20, 16 ] ] }
@@ -4131,7 +4138,7 @@
 			"filter": [ "==", "kind", "pedestrian" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4153,7 +4160,7 @@
 			"filter": [ "==", "kind", "living_street" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4175,7 +4182,7 @@
 			"filter": [ "==", "kind", "residential" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4197,7 +4204,7 @@
 			"filter": [ "==", "kind", "unclassified" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4219,7 +4226,7 @@
 			"filter": [ "==", "kind", "tertiary" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4241,7 +4248,7 @@
 			"filter": [ "==", "kind", "secondary" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4263,7 +4270,7 @@
 			"filter": [ "==", "kind", "primary" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4285,7 +4292,7 @@
 			"filter": [ "==", "kind", "trunk" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"symbol-placement": "line",
 				"text-anchor": "center",
 				"text-size": { "stops": [ [ 12, 10 ], [ 15, 13 ] ] }
@@ -4307,7 +4314,7 @@
 			"filter": [ "==", "kind", "neighbourhood" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 14, 16 ] ] },
 				"text-transform": "uppercase"
 			},
@@ -4328,7 +4335,7 @@
 			"filter": [ "==", "kind", "quarter" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 13, 17 ] ] },
 				"text-transform": "uppercase"
 			},
@@ -4349,7 +4356,7 @@
 			"filter": [ "==", "kind", "suburb" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 11, 15 ], [ 13, 18 ] ] },
 				"text-transform": "uppercase"
 			},
@@ -4370,7 +4377,7 @@
 			"filter": [ "==", "kind", "hamlet" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 10, 15 ], [ 12, 18 ] ] }
 			},
 			"paint": {
@@ -4390,7 +4397,7 @@
 			"filter": [ "==", "kind", "village" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 9, 15 ], [ 12, 18 ] ] }
 			},
 			"paint": {
@@ -4410,7 +4417,7 @@
 			"filter": [ "==", "kind", "town" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 8, 15 ], [ 12, 18 ] ] }
 			},
 			"paint": {
@@ -4430,7 +4437,7 @@
 			"filter": [ "in", "admin_level", 4, "4" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-transform": "uppercase",
 				"text-anchor": "top",
 				"text-offset": [ 0, 0.2 ],
@@ -4455,7 +4462,7 @@
 			"filter": [ "==", "kind", "city" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 7, 15 ], [ 10, 18 ] ] }
 			},
 			"paint": {
@@ -4475,7 +4482,7 @@
 			"filter": [ "==", "kind", "state_capital" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 6, 15 ], [ 10, 19 ] ] }
 			},
 			"paint": {
@@ -4495,7 +4502,7 @@
 			"filter": [ "==", "kind", "capital" ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": { "stops": [ [ 5, 16 ], [ 10, 20 ] ] }
 			},
 			"paint": {
@@ -4515,7 +4522,7 @@
 			"filter": [ "all", [ "in", "admin_level", 2, "2" ], [ "<=", "way_area", 10000000 ] ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-transform": "uppercase",
 				"text-anchor": "top",
 				"text-offset": [ 0, 0.2 ],
@@ -4540,7 +4547,7 @@
 			"filter": [ "all", [ "in", "admin_level", 2, "2" ], [ "<", "way_area", 90000000 ], [ ">", "way_area", 10000000 ] ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-transform": "uppercase",
 				"text-anchor": "top",
 				"text-offset": [ 0, 0.2 ],
@@ -4565,7 +4572,7 @@
 			"filter": [ "all", [ "in", "admin_level", 2, "2" ], [ ">=", "way_area", 90000000 ] ],
 			"layout": {
 				"text-field": "{name_en}",
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-transform": "uppercase",
 				"text-anchor": "top",
 				"text-offset": [ 0, 0.2 ],
@@ -4596,7 +4603,7 @@
 				"icon-padding": 5,
 				"symbol-avoid-edges": true,
 				"icon-image": "basics:marking-arrow",
-				"text-font": [ "Radio Canada" ]
+				"text-font": [ "radio_canada_regular" ]
 			},
 			"minzoom": 16,
 			"paint": {
@@ -4618,7 +4625,7 @@
 				"icon-padding": 5,
 				"symbol-avoid-edges": true,
 				"icon-image": "basics:marking-arrow",
-				"text-font": [ "Radio Canada" ]
+				"text-font": [ "radio_canada_regular" ]
 			},
 			"minzoom": 16,
 			"paint": {
@@ -4637,7 +4644,7 @@
 				"icon-size": { "stops": [ [ 16, 0.5 ], [ 18, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-keep-upright": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": 10,
 				"icon-anchor": "bottom",
 				"text-anchor": "top",
@@ -4664,7 +4671,7 @@
 				"icon-size": { "stops": [ [ 15, 0.5 ], [ 17, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-keep-upright": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": 10,
 				"icon-anchor": "bottom",
 				"text-anchor": "top",
@@ -4691,7 +4698,7 @@
 				"icon-size": { "stops": [ [ 14, 0.5 ], [ 16, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-keep-upright": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": 10,
 				"icon-anchor": "bottom",
 				"text-anchor": "top",
@@ -4718,7 +4725,7 @@
 				"icon-size": { "stops": [ [ 14, 0.5 ], [ 16, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-keep-upright": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": 10,
 				"icon-anchor": "bottom",
 				"text-anchor": "top",
@@ -4745,7 +4752,7 @@
 				"icon-size": { "stops": [ [ 13, 0.5 ], [ 15, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-keep-upright": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": 10,
 				"icon-anchor": "bottom",
 				"text-anchor": "top",
@@ -4772,7 +4779,7 @@
 				"icon-size": { "stops": [ [ 13, 0.5 ], [ 15, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-keep-upright": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": 10,
 				"icon-anchor": "bottom",
 				"text-anchor": "top",
@@ -4799,7 +4806,7 @@
 				"icon-size": { "stops": [ [ 12, 0.5 ], [ 14, 1 ] ] },
 				"symbol-placement": "point",
 				"icon-keep-upright": true,
-				"text-font": [ "Radio Canada" ],
+				"text-font": [ "radio_canada_regular" ],
 				"text-size": 10,
 				"icon-anchor": "bottom",
 				"text-anchor": "top",

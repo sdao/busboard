@@ -113,10 +113,10 @@ section.radar>article {
 	padding: 0;
 	overflow: clip;
 	width: 100%;
+	min-height: 420px;
 }
 
 section.radar>article>div {
-	height: 100%;
 	margin: 0;
 }
 
