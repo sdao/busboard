@@ -28,7 +28,7 @@ function getSaturation(r: number, g: number, b: number) {
 
 /**
  * The color scheme used by NOAA/NWS for their radar map images generally uses less-saturated
- * colors for low dBZ values (e.g., < 60% saturation for < 20 dBZ).
+ * colors for low dBZ values (e.g., < 50% saturation for < 20 dBZ).
  * We take advantage of this to make those areas more transparent in the processed image.
  * Areas between the two thresholds become semi-transparent.
  * The image is processed in place with the data buffer being overwritten.
@@ -36,7 +36,7 @@ function getSaturation(r: number, g: number, b: number) {
  * @param transparencyThreshold Any areas with a saturation (0.0-1.0) equal or less than this become fully-transparent.
  * @param opacityThreshold Any areas with a saturation (0.0-1.0) equal or greater than this become fully-opaque.
  * */
-function saturationToAlpha(data: Uint8ClampedArray, transparencyThreshold = 0.6, opacityThreshold = 1.0) {
+function saturationToAlpha(data: Uint8ClampedArray, transparencyThreshold = 0.5, opacityThreshold = 1.0) {
     for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
