@@ -17,7 +17,7 @@ export default function WeatherEmoji({ current, lat, lon }: { current: WeatherCo
     if (lowerText.includes("snow") || lowerText.includes("blizzard")) {
       return '❄️';
     }
-    else if (lowerText.includes("thunderstorm")) {
+    else if (lowerText.includes("thunder")) {
       return '⚡';
     }
     else if (lowerText.includes("tropical storm") || lowerText.includes("hurricane")) {
@@ -28,6 +28,9 @@ export default function WeatherEmoji({ current, lat, lon }: { current: WeatherCo
     }
     else if (lowerText.includes("tornado") || lowerText.includes("dust") || lowerText.includes("sand")) {
       return '🌪️';
+    }
+    else if (lowerText.includes("overcast")) {
+      return '☁️';
     }
     else if (lowerText.includes("mostly cloudy")) {
       return '🌥️';
@@ -41,7 +44,7 @@ export default function WeatherEmoji({ current, lat, lon }: { current: WeatherCo
     else if (lowerText.includes("windy") || lowerText.includes("breezy")) {
       return '🍃';
     }
-    else if (lowerText.includes("overcast") || lowerText.includes("haze") || lowerText.includes("smoke") || lowerText.includes("fog") || lowerText.includes("mist")) {
+    else if (lowerText.includes("haze") || lowerText.includes("smoke") || lowerText.includes("fog") || lowerText.includes("mist")) {
       return '🌫️';
     }
     else {
