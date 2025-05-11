@@ -2,7 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour } from "../shared/types";
+import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, Precipitation } from "../shared/types";
 import { HTTPException } from "hono/http-exception";
 
 async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat, lon }: { lat: number, lon: number }): Promise<ReverseGeocode> {
@@ -244,7 +244,7 @@ async function getWeatherCurrent(apiKey: string, { station }: { station: string 
   const properties = payload.properties;
   const textDescription = "textDescription" in properties && typeof properties.textDescription === "string" ? properties.textDescription : "";
 
-  let precipitation: string | null = null;
+  let precipitation: Precipitation | null = null;
   if ("presentWeather" in properties && Array.isArray(properties.presentWeather)) {
     precipitationCheck: for (const phenomenon of properties.presentWeather as unknown[]) {
       if (typeof phenomenon === "object" && phenomenon !== null &&
