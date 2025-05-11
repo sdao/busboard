@@ -94,7 +94,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
 
   const showBus = forceBus ?? (rows.length > 0);
   const showRadarIfChancePrecipitationGreater = 20;
-  const showRadar = forceRadar ?? (weatherForecast.data !== undefined && weatherForecast.data.chancePrecipitation > showRadarIfChancePrecipitationGreater);
+  const showRadar = forceRadar ?? ((weatherCurrent.data !== undefined && weatherCurrent.data.precipitation !== null) || (weatherForecast.data !== undefined && weatherForecast.data.chancePrecipitation > showRadarIfChancePrecipitationGreater));
 
   return (
     <>

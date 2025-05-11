@@ -244,6 +244,33 @@ async function getWeatherCurrent(apiKey: string, { station }: { station: string 
   const properties = payload.properties;
   const textDescription = "textDescription" in properties && typeof properties.textDescription === "string" ? properties.textDescription : "";
 
+  let precipitation: string | null = null;
+  if ("presentWeather" in properties && Array.isArray(properties.presentWeather)) {
+    precipitationCheck: for (const phenomenon of properties.presentWeather as unknown[]) {
+      if (typeof phenomenon === "object" && phenomenon !== null &&
+        "weather" in phenomenon && typeof phenomenon.weather === "string") {
+        // phenomenon.weather should be one of:
+        // fog_mist, dust_storm, dust, drizzle, funnel_cloud, fog, smoke, hail, snow_pellets, haze,
+        // ice_crystals, ice_pellets, dust_whirls, spray, rain, sand, snow_grains, snow, squalls,
+        // sand_storm, thunderstorms, unknown, volcanic_ash
+        switch (phenomenon.weather) {
+          case "drizzle":
+          case "hail":
+          case "snow_pellets":
+          case "ice_crystals":
+          case "ice_pellets":
+          case "spray":
+          case "rain":
+          case "snow_grains":
+          case "snow":
+          case "thunderstorms":
+            precipitation = phenomenon.weather;
+            break precipitationCheck;
+        }
+      }
+    }
+  }
+
   const parseMetarTemperature = (metar: string) => {
     const components = metar.split(" ");
     const tempDewPoint = components.find(comp => comp.startsWith("T") && comp.length === 9);
@@ -257,7 +284,7 @@ async function getWeatherCurrent(apiKey: string, { station }: { station: string 
   // Use temperature if explicitly provided; otherwise if the METAR is available, parse from that instead
   if ("temperature" in properties && typeof properties.temperature === "object" && properties.temperature !== null &&
     "value" in properties.temperature && typeof properties.temperature.value === "number") {
-    return { description: textDescription, temperature: properties.temperature.value };
+    return { description: textDescription, precipitation, temperature: properties.temperature.value };
   }
   else if ("rawMessage" in properties && typeof properties.rawMessage === "string") {
     const metarTemperature = parseMetarTemperature(properties.rawMessage);
@@ -265,7 +292,7 @@ async function getWeatherCurrent(apiKey: string, { station }: { station: string 
       throw new HTTPException(undefined, { message: `<${response.url}> response rawMessage (METAR) is missing temperature` });
     }
 
-    return { description: textDescription, temperature: metarTemperature };
+    return { description: textDescription, precipitation, temperature: metarTemperature };
   }
   else {
     throw new HTTPException(undefined, { message: `<${response.url}> response is missing temperature or rawMessage` });

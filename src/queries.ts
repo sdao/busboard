@@ -112,7 +112,7 @@ export function getWeatherCurrentQuery(reverseGeocode?: ReverseGeocode) {
                 return result;
             }
 
-            return { description: "", temperature: 0 };
+            return { description: "", precipitation: null, temperature: 0 };
         },
         enabled: reverseGeocode !== undefined,
         refetchInterval: 15 * 60 * 1000
