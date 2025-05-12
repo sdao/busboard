@@ -1,3 +1,10 @@
 .weather-emoji {
-	margin: 0 -0.1em;
+	display: flex;
+	align-items: center;
+}
+
+.weather-emoji img {
+	height: 1lh;
+	width: 1lh;
+	margin: 0;
 }
