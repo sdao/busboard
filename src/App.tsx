@@ -99,7 +99,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   return (
     <>
       <header>
-        {showBus || showRadar ? <WeatherDisplay current={weatherCurrent.data ?? null} forecast={weatherForecast.data ?? null} uvForecast={uvForecast.data ?? null} lat={lat} lon={lon} /> : <></>}
+        {(showBus || showRadar) ? <WeatherDisplay current={weatherCurrent.data ?? null} forecast={weatherForecast.data ?? null} uvForecast={uvForecast.data ?? null} lat={lat} lon={lon} /> : <></>}
       </header>
       <main>
         {showBus
@@ -169,6 +169,17 @@ function App() {
 
   const isFullscreen = useSyncExternalStore(isFullscreenSubscribe, isFullscreenGetSnapshot);
 
+  // Geolocation effect
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(position => {
+      console.log("GEOLOCATION SUCCESS!");
+      setLat(position.coords.latitude);
+      setLon(position.coords.longitude);
+      localStorage.setItem("lat", String(position.coords.latitude));
+      localStorage.setItem("lon", String(position.coords.longitude));
+    });
+  }, []);
+
   // Wakelock effect
   useEffect(() => {
     if (isFullscreen) {
@@ -187,21 +198,10 @@ function App() {
     return () => { };
   }, [isFullscreen]);
 
-  // Geolocation effect
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(position => {
-      console.log("GEOLCATION SUCCESS!");
-      setLat(position.coords.latitude);
-      setLon(position.coords.longitude);
-      localStorage.setItem("lat", String(position.coords.latitude));
-      localStorage.setItem("lon", String(position.coords.longitude));
-    });
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <AutoHideMouseCursor>
-        {lat !== null && lon !== null
+        {(lat !== null && lon !== null)
           ? (
             <>
               <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
