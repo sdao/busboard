@@ -1,14 +1,15 @@
 import GtfsRealtimeBindings from "gtfs-realtime-bindings";
 import { Temporal } from "@js-temporal/polyfill";
-import { BusInstance, BusTimes, DirectionId, DirectionInstance, RouteId, RouteInstance, StopId, StopInstance } from "./types";
+import { BusInstance, BusTimes, DirectionId, DirectionInstance, RouteId, RouteInstance, StopId, StopInstance, TripId } from "./types";
 
 export default class BusTimesBuilder {
-    readonly times: Map<StopId, Map<RouteId, Map<DirectionId, { hasLeftTerminus: boolean, seconds: number }[]>>>;
+    readonly times: Map<StopId, Map<RouteId, Map<DirectionId, { tripId: TripId, hasLeftTerminus: boolean, seconds: number }[]>>>;
     readonly stopIds: ReadonlyArray<StopId>;
     readonly feedTimestamp: number;
 
     currentRouteId: RouteId = "";
     currentDirectionId: DirectionId = 0;
+    currentTripId: TripId = "";
     currentTripHasLeftTerminus: boolean = true;
 
     constructor(stopIds: StopId[], feedTimestamp: number) {
@@ -21,7 +22,7 @@ export default class BusTimesBuilder {
         }
     }
 
-    getTimesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): { hasLeftTerminus: boolean, seconds: number }[] {
+    getTimesArray(stopId: StopId, routeId: RouteId, directionId: DirectionId): { tripId: string, hasLeftTerminus: boolean, seconds: number }[] {
         let stop = this.times.get(stopId);
         if (stop === undefined) {
             stop = new Map();
@@ -43,9 +44,10 @@ export default class BusTimesBuilder {
         return direction;
     }
 
-    beginTrip(routeId: RouteId, directionId: DirectionId) {
+    beginTrip(routeId: RouteId, directionId: DirectionId, tripId: TripId) {
         this.currentRouteId = routeId;
         this.currentDirectionId = directionId;
+        this.currentTripId = tripId;
         this.currentTripHasLeftTerminus = true;
     }
 
@@ -65,7 +67,7 @@ export default class BusTimesBuilder {
         if (this.stopIds.includes(stopId) &&
             arrivalTimestamp !== undefined) {
             if (scheduleRelationship === "SCHEDULED" || scheduleRelationship === GtfsRealtimeBindings.transit_realtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SCHEDULED) {
-                this.getTimesArray(stopId, this.currentRouteId, this.currentDirectionId).push({ hasLeftTerminus: this.currentTripHasLeftTerminus, seconds: arrivalTimestamp });
+                this.getTimesArray(stopId, this.currentRouteId, this.currentDirectionId).push({ tripId: this.currentTripId, hasLeftTerminus: this.currentTripHasLeftTerminus, seconds: arrivalTimestamp });
             }
 
             // This stop cannot occur again in this tripUpdate.stopTimeUpdate
@@ -86,7 +88,7 @@ export default class BusTimesBuilder {
                 stopInstance.routes.push(routeInstance);
 
                 for (const [directionId, times] of directions) {
-                    const nextInstances: BusInstance[] = times.sort((a, b) => a.seconds - b.seconds).slice(0, 5).map(arrival => ({ hasLeftTerminus: arrival.hasLeftTerminus, time: Temporal.Instant.fromEpochMilliseconds(arrival.seconds * 1000.0).toString() }));
+                    const nextInstances: BusInstance[] = times.sort((a, b) => a.seconds - b.seconds).slice(0, 5).map(arrival => ({ tripId: arrival.tripId, hasLeftTerminus: arrival.hasLeftTerminus, time: Temporal.Instant.fromEpochMilliseconds(arrival.seconds * 1000.0).toString() }));
                     const directionInstance: DirectionInstance = { directionId, nextInstances };
                     routeInstance.directions.push(directionInstance);
                 }
@@ -121,8 +123,9 @@ export default class BusTimesBuilder {
                 "stopTimeUpdate" in entity.tripUpdate && Array.isArray(entity.tripUpdate.stopTimeUpdate)) {
                 const { trip, stopTimeUpdate } = entity.tripUpdate;
                 if ("routeId" in trip && typeof trip.routeId === "string" &&
-                    "directionId" in trip && typeof trip.directionId === "number") {
-                    builder.beginTrip(trip.routeId, trip.directionId);
+                    "directionId" in trip && typeof trip.directionId === "number" &&
+                    "tripId" in trip && typeof trip.tripId === "string") {
+                    builder.beginTrip(trip.routeId, trip.directionId, trip.tripId);
 
                     for (const update of stopTimeUpdate as unknown[]) {
                         if (typeof update === "object" && update !== null) {
@@ -164,9 +167,9 @@ export default class BusTimesBuilder {
             if (entity.tripUpdate !== null && entity.tripUpdate !== undefined) {
                 const { trip, stopTimeUpdate } = entity.tripUpdate;
                 if (stopTimeUpdate !== null && stopTimeUpdate !== undefined) {
-                    const { routeId, directionId } = trip;
+                    const { routeId, directionId, tripId } = trip;
                     if (routeId !== null && routeId !== undefined && directionId !== null && directionId !== undefined) {
-                        builder.beginTrip(routeId, directionId);
+                        builder.beginTrip(routeId, directionId, tripId ?? entity.id);
                         
                         for (const update of stopTimeUpdate) {
                             if (update.stopId !== null && update.stopId !== undefined &&

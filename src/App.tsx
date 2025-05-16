@@ -173,8 +173,8 @@ function App() {
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(position => {
       console.log("GEOLOCATION SUCCESS!");
-      setLat(position.coords.latitude);
-      setLon(position.coords.longitude);
+      setLat(oldLat => (oldLat === null || Math.abs(position.coords.latitude - oldLat) > 1e-3) ? position.coords.latitude : oldLat);
+      setLon(oldLon => (oldLon === null || Math.abs(position.coords.longitude - oldLon) > 1e-3) ? position.coords.longitude : oldLon);
       localStorage.setItem("lat", String(position.coords.latitude));
       localStorage.setItem("lon", String(position.coords.longitude));
     });

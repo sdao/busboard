@@ -1,8 +1,9 @@
 export type RouteId = string;
 export type StopId = string;
 export type DirectionId = number;
+export type TripId = string;
 
-export type BusInstance = { hasLeftTerminus: boolean, time: string };
+export type BusInstance = { tripId: TripId, hasLeftTerminus: boolean, time: string };
 export type DirectionInstance =  { directionId: DirectionId, nextInstances: BusInstance[] };
 export type RouteInstance = { routeId: RouteId, directions: DirectionInstance[] };
 export type StopInstance = { stopId: StopId, routes: RouteInstance[] };

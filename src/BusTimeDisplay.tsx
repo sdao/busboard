@@ -10,7 +10,7 @@ export default function BusTimeDisplay({ routeId, directionId, nextInstances, tr
     <article>
       <div><RouteIdDisplay routeId={routeId} /></div>
       <div className="bustime-headsign"><RouteNameDisplay routeId={routeId} directionId={directionId} transitInfo={transitInfo} /></div>
-      <div><div className="bustime-minutes-display-list">{nextInstances.map(inst => <MinutesDisplay key={inst.time} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div><div className="bustime-subtitle">minutes</div></div>
+      <div><div className="bustime-minutes-display-list">{nextInstances.map(inst => <MinutesDisplay key={inst.tripId} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div><div className="bustime-subtitle">minutes</div></div>
     </article>
   )
 }
