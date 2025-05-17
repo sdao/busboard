@@ -133,11 +133,11 @@ export function getWeatherForecastQuery(reverseGeocode?: ReverseGeocode) {
                 }
 
                 const result: WeatherForecast = await response.json();
-                console.info(`Received weather forecast: high ${result.highTemperature}, low ${result.lowTemperature}, precip ${result.chancePrecipitation}`);
+                console.info(`Received weather forecast: high ${result.highTemperature}, low ${result.lowTemperature}, ${result.forecasts.length} forecasts`);
                 return result;
             }
 
-            return { highTemperature: 0, lowTemperature: 0, chancePrecipitation: 0 };
+            return { highTemperature: 0, lowTemperature: 0, forecasts: [] };
         },
         enabled: reverseGeocode !== undefined,
         refetchInterval: 15 * 60 * 1000

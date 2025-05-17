@@ -21,7 +21,8 @@ export type PhenomenonModifier = typeof PHENOMENON_MODIFIERS[number];
 export type Phenomenon = { type: PhenomenonType, intensity: PhenomenonIntensity | null, modifier: PhenomenonModifier | null };
 export type SkyCoverage = typeof SKY_COVERAGE_TYPES[number];
 export type WeatherConditions = { rawMessage: string, temperature: number, phenomena: Phenomenon[], skyCoverage: SkyCoverage };
-export type WeatherForecast = { highTemperature: number, lowTemperature: number, chancePrecipitation: number };
+export type WeatherForecastHour = { temperature: number, chancePrecipitation: number, description: string, time: string };
+export type WeatherForecast = { highTemperature: number, lowTemperature: number, forecasts: WeatherForecastHour[] };
 
 export type UvForecastHour = { uvIndex: number, time: string };
 export type UvForecastDay = { forecasts: UvForecastHour[] };

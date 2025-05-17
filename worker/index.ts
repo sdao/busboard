@@ -2,7 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour } from "../shared/types";
+import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, WeatherForecastHour } from "../shared/types";
 import { decodeMetar } from "../shared/metar";
 import { HTTPException } from "hono/http-exception";
 
@@ -235,9 +235,10 @@ async function getMetar({ station }: { station: string }): Promise<WeatherCondit
 }
 
 async function getWeatherForecast(apiKey: string, { wfo, x, y }: { wfo: string, x: number, y: number }): Promise<WeatherForecast> {
-  const response = await fetch(`https://api.weather.gov/gridpoints/${wfo}/${x},${y}`, {
+  const response = await fetch(`https://api.weather.gov/gridpoints/${wfo}/${x},${y}/forecast/hourly`, {
     headers: {
-      "user-agent": apiKey
+      "user-agent": apiKey,
+      "feature-flags": "forecast_temperature_qv",
     }
   });
 
@@ -264,58 +265,62 @@ async function getWeatherForecast(apiKey: string, { wfo, x, y }: { wfo: string, 
   }
 
   const properties = payload.properties;
-  if (!("minTemperature" in properties && "maxTemperature" in properties)) {
-    throw new HTTPException(undefined, { message: `<${response.url}> response is missing maxTemperature or minTemperature` });
+  if (!("periods" in properties && Array.isArray(properties.periods))) {
+    throw new HTTPException(undefined, { message: `<${response.url}> response is missing periods property` });
   }
 
-  const { maxTemperature, minTemperature } = properties;
-
-  const findBestValue = (values: unknown[]) => {
-    const now = Temporal.Now.zonedDateTimeISO("UTC");
-    for (const entry of values) {
-      if (typeof entry === "object" && entry !== null && "validTime" in entry && "value" in entry) {
-        const { validTime, value } = entry;
-        if (typeof validTime === "string" && typeof value === "number") {
-          const [timeString, durationString] = validTime.split("/");
-          const time = Temporal.Instant.from(timeString).toZonedDateTimeISO("UTC");
-          const duration = Temporal.Duration.from(durationString);
-          const endTime = time.add(duration);
-          if (Temporal.ZonedDateTime.compare(now, endTime) <= 0) {
-            return value;
-          }
-        }
-      }
+  const forecasts: WeatherForecastHour[] = [];
+  for (const period of properties.periods as unknown[]) {
+    if (typeof period === "object" && period !== null &&
+      "startTime" in period && typeof period.startTime === "string" &&
+      "temperature" in period && typeof period.temperature === "object" && period.temperature !== null &&
+      "value" in period.temperature && typeof period.temperature.value === "number" &&
+      "probabilityOfPrecipitation" in period && typeof period.probabilityOfPrecipitation === "object" && period.probabilityOfPrecipitation !== null &&
+      "value" in period.probabilityOfPrecipitation && typeof period.probabilityOfPrecipitation.value === "number" &&
+      "shortForecast" in period && typeof period.shortForecast === "string") {
+      forecasts.push({
+        temperature: period.temperature.value,
+        chancePrecipitation: period.probabilityOfPrecipitation.value,
+        description: period.shortForecast,
+        time: period.startTime
+      })
     }
-    return undefined;
-  };
 
-  let high: undefined | number = undefined;
-  if (typeof maxTemperature === "object" && maxTemperature !== null && "values" in maxTemperature) {
-    const values = maxTemperature.values;
-    if (Array.isArray(values)) {
-      high = findBestValue(values);
+    // Maximum one day forward
+    if (forecasts.length === 24) {
+      break;
     }
   }
 
-  let low: undefined | number = undefined;
-  if (typeof minTemperature === "object" && minTemperature !== null && "values" in minTemperature) {
-    const values = minTemperature.values;
-    if (Array.isArray(values)) {
-      low = findBestValue(values);
+  if (forecasts.length === 0) {
+    throw new HTTPException(undefined, { message: `<${response.url}> response has empty periods array` });
+  }
+
+  // Iterate through forecast periods until we hit 6 AM and 6 PM.
+  // Find the high and low temperature within that range.
+  // e.g., at 5 AM returns the high and low between 5 AM-6 PM.
+  //       at 6 AM returns the high and low between 6 AM-6 AM the next day.
+  //       at 8 PM returns the high and low between 8 PM-6 PM the next day.
+  let high = forecasts[0].temperature;
+  let low = forecasts[0].temperature;
+  let sixes = 0;
+  for (let i = 1; i < forecasts.length; ++i) {
+    const forecast = forecasts[i];
+    const time = Temporal.PlainDateTime.from(forecast.time);
+    if (time.hour === 6 || time.hour === 18) {
+      sixes++;
+    }
+
+    high = Math.max(high, forecast.temperature);
+    low = Math.min(low, forecast.temperature);
+
+    if (sixes === 2) {
+      console.info(`Calculated low/high temp using next ${i} periods`);
+      break;
     }
   }
 
-  if (low === undefined || high === undefined) {
-    throw new HTTPException(undefined, { message: `<${response.url}> response is missing non-expired elements for maxTemperature or minTemperature` });
-  }
-
-  let chancePrecipitation: undefined | number = undefined;
-  if ("probabilityOfPrecipitation" in properties && typeof properties.probabilityOfPrecipitation === "object" && properties.probabilityOfPrecipitation !== null &&
-    "values" in properties.probabilityOfPrecipitation && Array.isArray(properties.probabilityOfPrecipitation.values)) {
-    chancePrecipitation = findBestValue(properties.probabilityOfPrecipitation.values);
-  }
-
-  return { highTemperature: high, lowTemperature: low, chancePrecipitation: chancePrecipitation ?? 0.0 };
+  return { highTemperature: high, lowTemperature: low, forecasts };
 }
 
 async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay> {
