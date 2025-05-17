@@ -3,7 +3,7 @@ import WeatherEmoji from "./WeatherEmoji";
 import WeatherHighLowTemp from "./WeatherHighLowTemp";
 import WeatherShortDesc from "./WeatherShortDesc";
 import WeatherUvDescription from "./WeatherUvDescription";
-import "./WeatherDisplay.css"
+import { Marquee } from "./Marquee";
 
 function celsiusToFahrenheit(c: number) {
   return Math.round(c * (9.0 / 5.0) + 32.0);
@@ -13,11 +13,11 @@ export default function WeatherDisplay({ current, forecast, uvForecast, lat, lon
   return (
     <>
       {current !== null ? <WeatherEmoji current={current} lat={lat} lon={lon} /> : <></>}
-      <div className="weather-description">
+      <Marquee>
         {current !== null ? <WeatherShortDesc current={current} /> : <></>}
         {forecast !== null ? <WeatherHighLowTemp forecast={forecast} /> : <></>}
         {uvForecast !== null ? <WeatherUvDescription uvForecast={uvForecast} lat={lat} lon={lon} /> : <></>}
-      </div>
+      </Marquee>
       {current !== null ? <div>{celsiusToFahrenheit(current.temperature)}&deg;F</div> : <div></div>}
     </>
   );

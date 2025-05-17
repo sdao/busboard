@@ -1,0 +1,127 @@
+@property --marquee-transition {
+    syntax: "<percentage>";
+    inherits: true;
+    initial-value: 0%;
+}
+
+@property --marquee-transition-2 {
+    syntax: "<percentage>";
+    inherits: true;
+    initial-value: 100%;
+}
+
+@property --marquee-transition-3 {
+    syntax: "<percentage>";
+    inherits: true;
+    initial-value: 200%;
+}
+
+.marquee {
+    display: grid;
+    --marquee-transition: 0%;
+    --marquee-transition-2: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.marquee:has(> :nth-child(2):last-child) {
+    animation: 30s ease-in-out infinite scroll-in-2;
+}
+
+.marquee:has(> :nth-child(3):last-child) {
+    animation: 45s ease-in-out infinite scroll-in-3;
+}
+
+.marquee>* {
+    grid-row: 1;
+    grid-column: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.marquee>*:first-child {
+    transform: translateY(var(--marquee-transition));
+}
+
+.marquee>*:nth-child(2) {
+    transform: translateY(var(--marquee-transition-2));
+}
+
+.marquee>*:nth-child(3) {
+    transform: translateY(var(--marquee-transition-3));
+}
+
+@keyframes scroll-in-2 {
+
+    0%,
+    45% {
+        --marquee-transition: 0%;
+        --marquee-transition-2: 100%;
+    }
+
+    /* scroll second div in 45-50 */
+    50% {
+        --marquee-transition: -100%;
+        --marquee-transition-2: 0%;
+        animation-timing-function: step-start;
+    }
+
+    /* swap divs */
+    51%,
+    95% {
+        --marquee-transition: 100%;
+        --marquee-transition-2: 0%;
+        animation-timing-function: initial;
+    }
+
+    /* scroll first div in 95-100 */
+    100% {
+        --marquee-transition: 0%;
+        --marquee-transition-2: -100%;
+    }
+}
+
+@keyframes scroll-in-3 {
+
+    0%,
+    30% {
+        --marquee-transition: 0%;
+        --marquee-transition-2: 100%;
+        --marquee-transition-3: 200%;
+    }
+
+    /* scroll second div in 30-33 */
+    33%,
+    64% {
+        --marquee-transition: -100%;
+        --marquee-transition-2: 0%;
+        --marquee-transition-3: 100%;
+    }
+
+
+    /* scroll second div in 64-67 */
+    67% {
+        --marquee-transition: -200%;
+        --marquee-transition-2: -100%;
+        --marquee-transition-3: 0%;
+        animation-timing-function: step-start;
+    }
+
+    /* swap divs */
+    68%,
+    97% {
+        --marquee-transition: 100%;
+        --marquee-transition-2: 200%;
+        --marquee-transition-3: 0%;
+        animation-timing-function: initial;
+    }
+
+    /* scroll first div in 97-100 */
+    100% {
+        --marquee-transition: 0%;
+        --marquee-transition-2: 100%;
+        --marquee-transition-3: -100%;
+    }
+}
