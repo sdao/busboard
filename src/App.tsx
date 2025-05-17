@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, QueryClient, QueryClientProvider, UseQueryRes
 import { Temporal } from "@js-temporal/polyfill";
 
 import { getGtfsRealtimeQuery, getGtfsStaticQuery, getReverseGeocodeQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
+import { isPrecipitation } from "../shared/types";
 import BusTimeDisplay from "./BusTimeDisplay";
 import RadarMap from "./RadarMap";
 import WeatherDisplay from "./WeatherDisplay";
@@ -94,7 +95,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
 
   const showBus = forceBus ?? (rows.length > 0);
   const showRadarIfChancePrecipitationGreater = 20;
-  const showRadar = forceRadar ?? ((weatherCurrent.data !== undefined && weatherCurrent.data.precipitation !== null) || (weatherForecast.data !== undefined && weatherForecast.data.chancePrecipitation > showRadarIfChancePrecipitationGreater));
+  const showRadar = forceRadar ?? (weatherCurrent.data?.phenomena.some(x => isPrecipitation(x.type)) === true || (weatherForecast.data !== undefined && weatherForecast.data.chancePrecipitation > showRadarIfChancePrecipitationGreater));
 
   return (
     <>

@@ -10,7 +10,7 @@ const client = hc<AppType>("/");
 export function getReverseGeocodeQuery(lat: number, lon: number) {
     return queryOptions({
         queryKey: ["reverseGeocode", lat, lon],
-        queryFn: async () => {
+        queryFn: async (): Promise<ReverseGeocode> => {
             console.log(`Fetching reverse geocode for ${lat}, ${lon}...`);
 
             const response = await client.geo.$get({ query: { lat: String(lat), lon: String(lon) } });
@@ -29,7 +29,7 @@ export function getReverseGeocodeQuery(lat: number, lon: number) {
 export function getGtfsStaticQuery(lat: number, lon: number) {
     return queryOptions({
         queryKey: ["gtfsStatic", lat, lon],
-        queryFn: async () => {
+        queryFn: async (): Promise<TransitSystemInfo> => {
             console.log(`Fetching GTFS-Static for ${lat}, ${lon}...`);
 
             const response = await client.gtfs.$get();
@@ -50,7 +50,7 @@ export function getGtfsStaticQuery(lat: number, lon: number) {
 export function getGtfsRealtimeQuery(transitInfo?: TransitSystemInfo) {
     return queryOptions({
         queryKey: ["gtfsRealtime", transitInfo?.closestStops],
-        queryFn: async () => {
+        queryFn: async (): Promise<BusTimes> => {
             if (transitInfo !== undefined && transitInfo.closestStops.length !== 0) {
                 console.log(`Fetching GTFS-Realtime for ${transitInfo.closestStops}...`);
 
@@ -97,22 +97,22 @@ export function getGtfsRealtimeQuery(transitInfo?: TransitSystemInfo) {
 
 export function getWeatherCurrentQuery(reverseGeocode?: ReverseGeocode) {
     return queryOptions({
-        queryKey: ["weatherCurrent", reverseGeocode?.weatherStation],
-        queryFn: async () => {
+        queryKey: ["metar", reverseGeocode?.weatherStation],
+        queryFn: async (): Promise<WeatherConditions> => {
             if (reverseGeocode !== undefined) {
                 console.log(`Fetching current weather for ${reverseGeocode.weatherStation}...`);
 
-                const response = await client.weather.$get({ query: { station: reverseGeocode.weatherStation } });
+                const response = await client.metar.$get({ query: { station: reverseGeocode.weatherStation } });
                 if (!response.ok) {
                     throw new Error(`Error fetching current weather (response status ${response.status} ${response.statusText})`);
                 }
 
                 const result: WeatherConditions = await response.json();
-                console.info(`Received current weather: ${result.description}, ${result.temperature}`);
+                console.info(`Received current weather: ${result.rawMessage}`);
                 return result;
             }
 
-            return { description: "", precipitation: null, temperature: 0 };
+            return { rawMessage: "", temperature: 0, phenomena: [], skyCoverage: "SKC" };
         },
         enabled: reverseGeocode !== undefined,
         refetchInterval: 15 * 60 * 1000
@@ -122,7 +122,7 @@ export function getWeatherCurrentQuery(reverseGeocode?: ReverseGeocode) {
 export function getWeatherForecastQuery(reverseGeocode?: ReverseGeocode) {
     return queryOptions({
         queryKey: ["weatherForecast", reverseGeocode?.weatherTile],
-        queryFn: async () => {
+        queryFn: async (): Promise<WeatherForecast> => {
             if (reverseGeocode !== undefined) {
                 const weatherTile = reverseGeocode.weatherTile;
                 console.log(`Fetching weather forecast for ${weatherTile.wfo},${weatherTile.x},${weatherTile.y}...`);
@@ -147,7 +147,7 @@ export function getWeatherForecastQuery(reverseGeocode?: ReverseGeocode) {
 export function getUvForecastQuery(reverseGeocode?: ReverseGeocode) {
     return queryOptions({
         queryKey: ["uvForecast", reverseGeocode?.zip],
-        queryFn: async () => {
+        queryFn: async (): Promise<UvForecastDay> => {
             if (reverseGeocode !== undefined) {
                 console.log(`Fetching UV for ${reverseGeocode.zip}...`);
 

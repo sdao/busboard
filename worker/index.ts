@@ -2,7 +2,8 @@ import { Temporal } from "@js-temporal/polyfill";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, Precipitation } from "../shared/types";
+import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour } from "../shared/types";
+import { decodeMetar } from "../shared/metar";
 import { HTTPException } from "hono/http-exception";
 
 async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat, lon }: { lat: number, lon: number }): Promise<ReverseGeocode> {
@@ -212,91 +213,25 @@ async function getGtfsRealtime(): Promise<Response> {
   return newResponse;
 }
 
-async function getWeatherCurrent(apiKey: string, { station }: { station: string }): Promise<WeatherConditions> {
-  const response = await fetch(`https://api.weather.gov/stations/${station}/observations/latest`, {
-    headers: {
-      "user-agent": apiKey
-    }
-  });
-
+async function getMetar({ station }: { station: string }): Promise<WeatherConditions> {
+  const response = await fetch(`https://aviationweather.gov/api/data/metar?ids=${station}&format=raw`);
   const { ok, headers } = response;
   if (!ok) {
     throw new HTTPException(undefined, { message: `<${response.url}> responded with: ${response.status}` });
   }
 
   const contentType = headers.get("content-type") || "";
-  if (!contentType.includes("application/geo+json")) {
-    throw new HTTPException(undefined, { message: `<${response.url}> did not respond with JSON content` });
+  if (!contentType.includes("text/plain")) {
+    throw new HTTPException(undefined, { message: `<${response.url}> did not respond with text content` });
   }
 
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  }
-  catch (e) {
-    throw new HTTPException(undefined, { message: `Error parsing JSON: ${e}`, cause: e });
+  const metar = await response.text();
+  const weatherConditions = decodeMetar(metar);
+  if (weatherConditions !== null) {
+    return weatherConditions;
   }
 
-  if (typeof payload !== "object" || payload === null || !("properties" in payload) || typeof payload.properties !== "object" || payload.properties === null) {
-    throw new HTTPException(undefined, { message: `<${response.url}> response is missing properties` });
-  }
-
-  const properties = payload.properties;
-  const textDescription = "textDescription" in properties && typeof properties.textDescription === "string" ? properties.textDescription : "";
-
-  let precipitation: Precipitation | null = null;
-  if ("presentWeather" in properties && Array.isArray(properties.presentWeather)) {
-    precipitationCheck: for (const phenomenon of properties.presentWeather as unknown[]) {
-      if (typeof phenomenon === "object" && phenomenon !== null &&
-        "weather" in phenomenon && typeof phenomenon.weather === "string") {
-        // phenomenon.weather should be one of:
-        // fog_mist, dust_storm, dust, drizzle, funnel_cloud, fog, smoke, hail, snow_pellets, haze,
-        // ice_crystals, ice_pellets, dust_whirls, spray, rain, sand, snow_grains, snow, squalls,
-        // sand_storm, thunderstorms, unknown, volcanic_ash
-        switch (phenomenon.weather) {
-          case "drizzle":
-          case "hail":
-          case "snow_pellets":
-          case "ice_crystals":
-          case "ice_pellets":
-          case "spray":
-          case "rain":
-          case "snow_grains":
-          case "snow":
-          case "thunderstorms":
-            precipitation = phenomenon.weather;
-            break precipitationCheck;
-        }
-      }
-    }
-  }
-
-  const parseMetarTemperature = (metar: string) => {
-    const components = metar.split(" ");
-    const tempDewPoint = components.find(comp => comp.startsWith("T") && comp.length === 9);
-    if (tempDewPoint !== undefined) {
-      const negative = tempDewPoint[1] == "1" ? -1 : 1;
-      return negative * parseInt(tempDewPoint.slice(2, 5)) / 10.0;
-    }
-    return undefined;
-  };
-
-  // Use temperature if explicitly provided; otherwise if the METAR is available, parse from that instead
-  if ("temperature" in properties && typeof properties.temperature === "object" && properties.temperature !== null &&
-    "value" in properties.temperature && typeof properties.temperature.value === "number") {
-    return { description: textDescription, precipitation, temperature: properties.temperature.value };
-  }
-  else if ("rawMessage" in properties && typeof properties.rawMessage === "string") {
-    const metarTemperature = parseMetarTemperature(properties.rawMessage);
-    if (metarTemperature === undefined) {
-      throw new HTTPException(undefined, { message: `<${response.url}> response rawMessage (METAR) is missing temperature` });
-    }
-
-    return { description: textDescription, precipitation, temperature: metarTemperature };
-  }
-  else {
-    throw new HTTPException(undefined, { message: `<${response.url}> response is missing temperature or rawMessage` });
-  }
+  throw new HTTPException(undefined, { message: `<${response.url}> response could not be decoded as a METAR` });
 }
 
 async function getWeatherForecast(apiKey: string, { wfo, x, y }: { wfo: string, x: number, y: number }): Promise<WeatherForecast> {
@@ -454,14 +389,14 @@ async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay
 
 const app = new Hono<{ Bindings: Env }>()
   .get(
-    "/weather",
+    "/metar",
     zValidator(
       "query",
       z.object({
         station: z.string(),
       })
     ),
-    async (c) => c.json(await getWeatherCurrent(c.env.WEATHER_API_KEY, c.req.valid("query"))))
+    async (c) => c.json(await getMetar(c.req.valid("query"))))
   .get(
     "/forecast",
     zValidator(
