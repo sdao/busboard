@@ -5,7 +5,7 @@
 	--warning-color: hsl(15, 100%, 65%);
 	--info-color: hsl(30, 100%, 65%);
 	--light-text-color: hsl(0, 0%, 75%);
-	--panel-background-color: hsl(225, 25%, 10%);
+	--panel-background-color: hsl(225, 25%, 15%);
 
 	margin: 0;
 }
