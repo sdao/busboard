@@ -11,8 +11,6 @@
 
 .minutes-until {
 	font-weight: 700;
-	font-variant-numeric: tabular-nums;
-	vertical-align: middle;
 }
 
 .has-not-left-terminus {

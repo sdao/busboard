@@ -1,15 +1,34 @@
-.bustime-headsign {
-	color: var(--route-color);
+.bustime {
+	display: flex;
+	align-items: center;
+	justify-content: space-evenly;
+	padding: 0.2rem;
+	gap: 0.2rem;
+	font-size: 2em;
 }
 
-.bustime-subtitle {
-	font-size: 0.5em;
+.bustime>div {
+	flex: 1;
+	margin: 0 0.1rem;
+}
+
+.bustime>div:last-child {
+	flex: none;
+	text-align: right;
+}
+
+.bustime>div:first-child {
+	flex: none;
+}
+
+.bustime-headsign {
+	color: var(--route-color);
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .bustime-minutes-display-list {
-    white-space: nowrap;
-	font-size: 1.1em;
-	min-width: 5ch;
+	white-space: nowrap;
 }
 
 .bustime-minutes-display-list:empty::after {

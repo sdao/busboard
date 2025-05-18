@@ -7,10 +7,10 @@ import "./BusTimeDisplay.css"
 
 export default function BusTimeDisplay({ routeId, directionId, nextInstances, transitInfo }: { routeId: RouteId, directionId: DirectionId, nextInstances: BusInstance[], transitInfo: TransitSystemInfo | null }) {
   return (
-    <article>
+    <div className="bustime">
       <div><RouteIdDisplay routeId={routeId} /></div>
       <div className="bustime-headsign"><RouteNameDisplay routeId={routeId} directionId={directionId} transitInfo={transitInfo} /></div>
-      <div><div className="bustime-minutes-display-list">{nextInstances.map(inst => <MinutesDisplay key={inst.tripId} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div><div className="bustime-subtitle">minutes</div></div>
-    </article>
+      <div className="bustime-minutes-display-list">{nextInstances.map(inst => <MinutesDisplay key={inst.tripId} hasLeftTerminus={inst.hasLeftTerminus} targetTime={Temporal.Instant.from(inst.time)} />)}</div>
+    </div>
   )
 }

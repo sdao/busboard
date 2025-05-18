@@ -1,0 +1,23 @@
+.forecast-hour {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+	font-size: 1.5em;
+    padding: 0.2rem 0.6rem;
+    align-items: center;
+}
+
+.forecast-hour-time {
+    font-size: 0.75em;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: var(--light-text-color);
+}
+
+.forecast-hour-emoji {
+    display: grid;
+    justify-content: center;
+}
+
+.forecast-hour-temp {
+    text-align: center;
+}

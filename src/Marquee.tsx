@@ -1,5 +1,5 @@
 import "./Marquee.css"
 
-export function Marquee(props: React.PropsWithChildren) {
+export default function Marquee(props: React.PropsWithChildren) {
     return <div className="marquee">{props.children}</div>;
 }

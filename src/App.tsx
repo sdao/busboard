@@ -5,10 +5,13 @@ import { Temporal } from "@js-temporal/polyfill";
 import { getGtfsRealtimeQuery, getGtfsStaticQuery, getReverseGeocodeQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
 import { isPrecipitation } from "../shared/types";
 import BusTimeDisplay from "./BusTimeDisplay";
+import Marquee from "./Marquee";
 import RadarMap from "./RadarMap";
 import WeatherDisplay from "./WeatherDisplay";
+import WeatherForecastTile from "./WeatherForecastTile";
 
 import "./App.css";
+import { useTime } from "./hooks";
 
 function AutoHideMouseCursor(props: React.PropsWithChildren) {
   const [showMouseCursor, setShowMouseCursor] = useState(true);
@@ -64,14 +67,36 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));
 
+  const now = useTime(60 * 1000);
+
   // Build rows for each stop/route/direction
-  const rows = [];
+  // Limit of 3
+  const busRows = [];
   if (busTimes.data !== undefined) {
-    for (const stop of busTimes.data.stops) {
+    busRowsLoop: for (const stop of busTimes.data.stops) {
       for (const route of stop.routes) {
         for (const dir of route.directions) {
           const key = `${stop.stopId}_${route.routeId}_${dir.directionId}`;
-          rows.push(<BusTimeDisplay key={key} routeId={route.routeId} directionId={dir.directionId} nextInstances={dir.nextInstances} transitInfo={transitInfo.data ?? null} />);
+          busRows.push(<BusTimeDisplay key={key} routeId={route.routeId} directionId={dir.directionId} nextInstances={dir.nextInstances} transitInfo={transitInfo.data ?? null} />);
+
+          if (busRows.length === 3) {
+            break busRowsLoop;
+          }
+        }
+      }
+    }
+  }
+
+  // Build rows for each forecast period
+  // Limit of 4
+  const forecastRows = [];
+  if (weatherForecast.data !== undefined) {
+    forecastRowsLoop: for (const forecast of weatherForecast.data.forecasts) {
+      if (Temporal.Instant.compare(Temporal.Instant.from(forecast.time), now) > 0) {
+        forecastRows.push(<section key={forecast.time}><WeatherForecastTile lat={lat} lon={lon} forecastHour={forecast} /></section>);
+
+        if (forecastRows.length === 4) {
+          break forecastRowsLoop;
         }
       }
     }
@@ -93,31 +118,34 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
     else return null;
   })();
 
-  const showBus = forceBus ?? (rows.length > 0);
+  const showBus = forceBus ?? (busRows.length > 0);
   const showRadarIfChancePrecipitationGreater = 20;
   const showRadar = forceRadar ?? (weatherCurrent.data?.phenomena.some(x => isPrecipitation(x.type)) === true || (weatherForecast.data?.forecasts.slice(0, 2).some(x => x.chancePrecipitation > showRadarIfChancePrecipitationGreater) === true));
 
   return (
     <>
-      <header>
-        {(showBus || showRadar) ? <WeatherDisplay current={weatherCurrent.data ?? null} forecast={weatherForecast.data ?? null} uvForecast={uvForecast.data ?? null} lat={lat} lon={lon} /> : <></>}
-      </header>
-      <main>
-        {showBus
-          ? (
-            <section>
-              {rows.length == 0 ? <article><div>Nothing scheduled</div></article> : rows}
-            </section>
-          )
-          : <></>}
+      {showBus
+        ? <header>
+            {busRows.length !== 0
+              ? <Marquee>{busRows}</Marquee>
+              : <span>No bus information available</span>
+            }
+          </header>
+        : <></>
+      }
+      <>
+        <section className="weather-display-section">
+          {weatherCurrent.data !== undefined ? <WeatherDisplay current={weatherCurrent.data} forecast={weatherForecast.data ?? null} uvForecast={uvForecast.data ?? null} lat={lat} lon={lon} /> : <></>}
+        </section>
         {showRadar
           ? (
-            <section className="radar">
-              <article><RadarMap lat={lat} lon={lon} radarStation={reverseGeocode.data?.radarStation} /></article>
+            <section className="weather-radar">
+              <RadarMap lat={lat} lon={lon} radarStation={reverseGeocode.data?.radarStation} />
             </section>
           )
-          : <></>}
-      </main>
+          : <div className="weather-forecast-list">{forecastRows}</div>
+        }
+      </>
       <footer>
         <DisplayQueryError displayName="Location information" useQueryResult={reverseGeocode} />
         <DisplayQueryError displayName="Transit agency info" useQueryResult={transitInfo} />
@@ -204,12 +232,12 @@ function App() {
       <AutoHideMouseCursor>
         {(lat !== null && lon !== null)
           ? (
-            <>
+            <main>
               <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
                 <button onClick={() => document.body.requestFullscreen()}>Enter Fullscreen</button>
               </div>
               <Dashboard lat={lat} lon={lon} />
-            </>
+            </main>
           )
           : <div className="toolbar"><div className="loading-spinner" /></div>
         }

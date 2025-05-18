@@ -26,12 +26,13 @@ export default function WeatherUvDescription({ uvForecast, lat, lon }: { uvForec
     // Only show UV if the high today is moderate or stronger
     const maxUvToday = Math.max(...forecasts.map(f => f.uvIndex));
     if (maxUvToday >= 3) {
+      const nbsp = '\xa0';
       const currentHourUv = forecasts.find(f => Temporal.PlainDateTime.compare(plainNow, Temporal.PlainDateTime.from(f.time)) <= 0);
       if (currentHourUv === undefined) {
-        return `UV High ${maxUvToday}`;
+        return `UV${nbsp}High${nbsp}${maxUvToday}`;
       }
       else {
-        return `UV ${currentHourUv.uvIndex} / High ${maxUvToday}`;
+        return `UV${nbsp}${currentHourUv.uvIndex} / Max${nbsp}${maxUvToday}`;
       }
     }
 
@@ -39,7 +40,7 @@ export default function WeatherUvDescription({ uvForecast, lat, lon }: { uvForec
   }, [lat, lon, now, uvForecast.forecasts]);
 
   if (uvDesc !== null) {
-    return <div>{uvDesc}</div>;
+    return <span>{uvDesc}</span>;
   }
   else {
     return <></>;

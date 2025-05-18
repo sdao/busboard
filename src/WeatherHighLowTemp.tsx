@@ -6,5 +6,5 @@ function celsiusToFahrenheit(c: number) {
 }
 
 export default function WeatherHighLowTemp({ forecast }: { forecast: WeatherForecast }) {
-  return <div><span className='temperature-high'>{celsiusToFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{celsiusToFahrenheit(forecast.lowTemperature)}&deg;</span></div>;
+  return <span><span className='temperature-high'>{celsiusToFahrenheit(forecast.highTemperature)}&deg;</span> / <span className='temperature-low'>{celsiusToFahrenheit(forecast.lowTemperature)}&deg;</span></span>;
 }

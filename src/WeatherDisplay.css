@@ -1,0 +1,61 @@
+.weather-display {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    hyphens: auto;
+}
+
+.weather-display>div {
+    padding: 0.2rem 0.6rem;
+    flex: none;
+}
+
+.weather-display>div:first-child {
+    padding-top: 0.6rem;
+}
+
+.weather-display>div:last-child {
+    padding-bottom: 0.6rem;
+}
+
+.weather-display>div:not(:first-child) {
+    font-weight: 400;
+}
+
+.weather-display-icon-temp {
+    display: grid;
+    grid-template-columns: minmax(0, 100%) 1fr;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.weather-display-icon-temp>.weather-emoji {
+    padding: 0.2em;
+    border-radius: 10em;
+    overflow: visible;
+    background-color: rgba(0, 0, 0, 40%);
+}
+
+.weather-display-icon-temp {
+    font-size: 2.5em;
+}
+
+.weather-display-icon-temp>div {
+    font-size: 1.3em;
+}
+
+.weather-display-description {
+    font-size: 2em;
+}
+
+.weather-display-subtitle {
+    font-size: 1.2em;
+    color: var(--light-text-color);
+    margin-left: 0.1em;
+}
+
+.weather-display-subtitle>span:not(:last-child)::after {
+    content: "\2022";
+    margin-left: 0.3em;
+    margin-right: 0.3em;
+}

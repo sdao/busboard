@@ -172,5 +172,5 @@ export default function WeatherEmoji({ current, lat, lon, time }: { current: Wea
     }
   }, [current, lat, lon, displayTime.epochMilliseconds]);
 
-  return <div className="weather-emoji"><img src={emoji} /></div>;
+  return <img className="weather-emoji" src={emoji} />;
 }
