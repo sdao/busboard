@@ -14,6 +14,10 @@
 	cursor: none;
 }
 
+.hide-screen {
+	opacity: 0%;
+}
+
 .toolbar {
 	text-align: center;
 	grid-area: toolbar;
@@ -86,6 +90,10 @@ footer em {
 .weather-forecast-list>section {
 	flex: 1;
 	display: grid;
+}
+
+.weather-radar {
+	grid-area: main2;
 }
 
 .loading-spinner {

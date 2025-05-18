@@ -104,6 +104,7 @@ button:focus-visible {
 
   body {
     animation: 60s linear infinite jitter;
+    overflow: hidden;
   }
 
   body>div {

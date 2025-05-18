@@ -16,6 +16,7 @@ import { useTime } from "./hooks";
 function AutoHideMouseCursor(props: React.PropsWithChildren) {
   const [showMouseCursor, setShowMouseCursor] = useState(true);
   const lastMouseMove = useRef(Temporal.Now.instant());
+  const now = useTime(5 * 60 * 1000);
 
   // Mousemove/idle effect
   useEffect(() => {
@@ -33,12 +34,16 @@ function AutoHideMouseCursor(props: React.PropsWithChildren) {
     return () => { };
   }, [showMouseCursor]);
 
-  const handleMouseMove = () => {
+  const handleMouseActivity = () => {
     lastMouseMove.current = Temporal.Now.instant();
     setShowMouseCursor(true);
   };
 
-  return <div onMouseMove={handleMouseMove} className={showMouseCursor ? "" : "hide-mouse-cursor"}>{props.children}</div>;
+  // Between 12AM-6AM, blank the screen if there's no activity
+  const localNow = now.toZonedDateTimeISO(Temporal.Now.timeZoneId());
+  const className = showMouseCursor ? "" : (localNow.hour < 6 ? "hide-screen" : "hide-mouse-cursor");
+
+  return <div onMouseMove={handleMouseActivity} onPointerDown={handleMouseActivity} className={className}>{props.children}</div>;
 }
 
 function DisplayQueryError({ displayName, useQueryResult }: { displayName: string, useQueryResult: UseQueryResult }) {
