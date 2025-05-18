@@ -17,7 +17,7 @@ export default function WeatherDisplay({ current, forecast, uvForecast, lat, lon
         <WeatherEmoji current={current} lat={lat} lon={lon} />
       </div>
       <div className="weather-display-description">
-        <WeatherShortDesc current={current} />
+        <WeatherShortDesc current={current} showIntensity={false} />
       </div>
       <div className="weather-display-subtitle">
         {forecast !== null ? <WeatherHighLowTemp forecast={forecast} /> : <></>}

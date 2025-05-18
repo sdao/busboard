@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { WeatherConditions } from "../shared/types";
 
-export default function WeatherShortDesc({ current }: { current: WeatherConditions }) {
+export default function WeatherShortDesc({ current, showIntensity }: { current: WeatherConditions, showIntensity?: boolean }) {
   const description = useMemo(() => {
     const phenomenon = current.phenomena.at(0);
     if (phenomenon !== undefined) {
@@ -13,17 +13,19 @@ export default function WeatherShortDesc({ current }: { current: WeatherConditio
       const parts: string[] = [];
 
       // Intensity (light/heavy)
-      switch (phenomenon.intensity) {
-        case "light":
-          parts.push("Light");
-          break;
-        case "heavy":
-          parts.push("Heavy");
-          break;
-        case null:
-          break;
-        default:
-          phenomenon.intensity satisfies never;
+      if (showIntensity === true) {
+        switch (phenomenon.intensity) {
+          case "light":
+            parts.push("Light");
+            break;
+          case "heavy":
+            parts.push("Heavy");
+            break;
+          case null:
+            break;
+          default:
+            phenomenon.intensity satisfies never;
+        }
       }
 
       // Modifiers that go before the weather type
