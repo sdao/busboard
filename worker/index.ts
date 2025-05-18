@@ -2,7 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, WeatherForecastHour } from "../shared/types";
+import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, WeatherForecastHour, isNwsIcon } from "../shared/types";
 import { decodeMetar } from "../shared/metar";
 import { HTTPException } from "hono/http-exception";
 
@@ -234,6 +234,8 @@ async function getMetar({ station }: { station: string }): Promise<WeatherCondit
   throw new HTTPException(undefined, { message: `<${response.url}> response could not be decoded as a METAR` });
 }
 
+const ICON_URL_REGEX = /(?:night|day)\/([a-z_]+)/;
+
 async function getWeatherForecast(apiKey: string, { wfo, x, y }: { wfo: string, x: number, y: number }): Promise<WeatherForecast> {
   const response = await fetch(`https://api.weather.gov/gridpoints/${wfo}/${x},${y}/forecast/hourly`, {
     headers: {
@@ -277,11 +279,15 @@ async function getWeatherForecast(apiKey: string, { wfo, x, y }: { wfo: string, 
       "value" in period.temperature && typeof period.temperature.value === "number" &&
       "probabilityOfPrecipitation" in period && typeof period.probabilityOfPrecipitation === "object" && period.probabilityOfPrecipitation !== null &&
       "value" in period.probabilityOfPrecipitation && typeof period.probabilityOfPrecipitation.value === "number" &&
-      "shortForecast" in period && typeof period.shortForecast === "string") {
+      "shortForecast" in period && typeof period.shortForecast === "string" &&
+      "icon" in period && typeof period.icon === "string") {
+      const iconMatch = period.icon.match(ICON_URL_REGEX);
+      const icon = iconMatch !== null && iconMatch.length >= 2 && isNwsIcon(iconMatch[1]) ? iconMatch[1] : "skc";
       forecasts.push({
         temperature: period.temperature.value,
         chancePrecipitation: period.probabilityOfPrecipitation.value,
         description: period.shortForecast,
+        icon,
         time: period.startTime
       })
     }

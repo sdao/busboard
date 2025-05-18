@@ -15,14 +15,16 @@ const PHENOMENON_TYPES = ["fog_mist", "dust_storm", "dust", "drizzle", "funnel_c
 const PHEONOMENON_INTENSITIES = ["light", "heavy"] as const;
 const PHENOMENON_MODIFIERS = ["patches", "blowing", "low_drifting", "freezing", "shallow", "partial", "showers"] as const;
 const SKY_COVERAGE_TYPES = ["OVC", "BKN", "SCT", "FEW", "SKC", "CLR", "VV"] as const;
+const NWS_ICONS = ["skc", "few", "sct", "bkn", "ovc", "wind_skc", "wind_few", "wind_sct", "wind_bkn", "wind_ovc", "snow", "rain_snow", "rain_sleet", "snow_sleet", "fzra", "rain_fzra", "snow_fzra", "sleet", "rain", "rain_showers", "rain_showers_hi", "tsra", "tsra_sct", "tsra_hi", "tornado", "hurricane", "tropical_storm", "dust", "smoke", "haze", "hot", "cold", "blizzard", "fog"] as const;
 export type PhenomenonType = typeof PHENOMENON_TYPES[number];
 export type PhenomenonIntensity = typeof PHEONOMENON_INTENSITIES[number];
 export type PhenomenonModifier = typeof PHENOMENON_MODIFIERS[number];
 export type Phenomenon = { type: PhenomenonType, intensity: PhenomenonIntensity | null, modifier: PhenomenonModifier | null };
 export type SkyCoverage = typeof SKY_COVERAGE_TYPES[number];
 export type WeatherConditions = { rawMessage: string, temperature: number, phenomena: Phenomenon[], skyCoverage: SkyCoverage };
-export type WeatherForecastHour = { temperature: number, chancePrecipitation: number, description: string, time: string };
+export type WeatherForecastHour = { temperature: number, chancePrecipitation: number, description: string, icon: NwsIcon, time: string };
 export type WeatherForecast = { highTemperature: number, lowTemperature: number, forecasts: WeatherForecastHour[] };
+export type NwsIcon = typeof NWS_ICONS[number];
 
 export type UvForecastHour = { uvIndex: number, time: string };
 export type UvForecastDay = { forecasts: UvForecastHour[] };
@@ -43,6 +45,10 @@ export function isPhenomenonModifier(s: unknown): s is PhenomenonModifier {
 
 export function isSkyCoverage(s: unknown): s is SkyCoverage {
     return Array.isArray(SKY_COVERAGE_TYPES) && SKY_COVERAGE_TYPES.includes(s);
+}
+
+export function isNwsIcon(s: unknown): s is NwsIcon {
+    return Array.isArray(NWS_ICONS) && NWS_ICONS.includes(s);
 }
 
 export function isPrecipitation(phenomenonType: PhenomenonType): boolean {

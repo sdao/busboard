@@ -1,7 +1,8 @@
 import { useMemo } from "react";
+import { Temporal } from "@js-temporal/polyfill";
 import SunCalc from "suncalc";
 
-import { PhenomenonType, SkyCoverage, WeatherConditions } from "../shared/types";
+import { NwsIcon, PhenomenonType, SkyCoverage, WeatherConditions } from "../shared/types";
 import { useTime } from "./hooks";
 import cloud_color_svg from "/emoji/cloud_color.svg?url";
 import droplet_color_svg from "/emoji/droplet_color.svg?url";
@@ -23,59 +24,62 @@ import moon_behind_large_cloud_color_svg from "/emoji_custom/moon_behind_large_c
 import moon_behind_small_cloud_color_svg from "/emoji_custom/moon_behind_small_cloud_color.svg?url";
 import "./WeatherEmoji.css"
 
-function emojiFromDescription(description: string, isDaytime: boolean) {
-  const parts = description.toLowerCase().split("and");
-  for (const part of parts) {
-    if (part.includes("drizzle") || part.includes("rain") || part.includes("spray")) {
-      return umbrella_with_rain_drops_color_svg; // ☔
-    }
-    else if (part.includes("mist") || part.includes("fog") || part.includes("smoke") || part.includes("haze")) {
-      return fog_color_svg; // 🌫️
-    }
-    else if (part.includes("funnel") || part.includes("spout") || part.includes("tornado") || part.includes("dust") || part.includes("sand")) {
-      return tornado_color_svg; // 🌪️
-    }
-    else if (part.includes("snow") || part.includes("blizzard")) {
+function emojiFromNwsIcon(icon: NwsIcon, isDaytime: boolean) {
+  switch (icon) {
+    case "snow":
+    case "rain_snow":
+    case "blizzard":
       return snowman_color_svg; // ☃️
-    }
-    else if (part.includes("hail") || part.includes("ice") || part.includes("icy")) {
+    case "rain_sleet":
+    case "snow_sleet":
+    case "fzra":
+    case "rain_fzra":
+    case "snow_fzra":
+    case "sleet":
       return snowflake_color_svg; // ❄️
-    }
-    else if (part.includes("squall") || part.includes("wind") || part.includes("breeze") || part.includes("breezy")) {
-      return leaf_fluttering_in_wind_color_svg; // 🍃
-    }
-    else if (part.includes("thunder")) {
+    case "rain":
+    case "rain_showers":
+    case "rain_showers_hi":
+    case "hurricane":
+    case "tropical_storm":
+      return umbrella_with_rain_drops_color_svg; // ☔
+    case "tsra":
+    case "tsra_sct":
+    case "tsra_hi":
       return high_voltage_color_svg; // ⚡
-    }
-    else if (part.includes("volcano") || part.includes("volcanic") || part.includes("ash")) {
-      return volcano_color_svg; // 🌋
-    }
-    else if (part.includes("shower") || part.includes("storm") || part.includes("hurricane")) {
-      return droplet_color_svg; //💧
-    }
-    else if (part.includes("overcast")) {
-      return cloud_color_svg; // ☁️
-    }
-    else if (part.includes("mostly cloudy")) {
-      return isDaytime
-        ? sun_behind_large_cloud_color_svg // 🌥️
-        : moon_behind_large_cloud_color_svg; // custom
-    }
-    else if (part.includes("partly cloudy") || part.includes("cloud")) {
-      return isDaytime
-        ? sun_behind_cloud_color_svg // ⛅
-        : moon_behind_cloud_color_svg; // custom
-    }
-    else if (part.includes("mostly clear")) {
+    case "tornado":
+    case "dust":
+      return tornado_color_svg; // 🌪️
+    case "smoke":
+    case "haze":
+    case "fog":
+      return fog_color_svg; // 🌫️
+    case "wind_skc":
+    case "wind_few":
+    case "wind_sct":
+    case "wind_bkn":
+    case "wind_ovc":
+      return leaf_fluttering_in_wind_color_svg; // 🍃
+    case "few":
       return isDaytime
         ? sun_behind_small_cloud_color_svg // ⛅
         : moon_behind_small_cloud_color_svg; // custom
-    }
-    else if (part.includes("clear")) {
+    case "sct":
       return isDaytime
-        ? sun_with_face_color_svg // 🌞
-        : first_quarter_moon_face_color_svg; // 🌛
-    }
+        ? sun_behind_cloud_color_svg // ⛅
+        : moon_behind_cloud_color_svg; // custom
+    case "bkn":
+      return isDaytime
+        ? sun_behind_large_cloud_color_svg // 🌥️
+        : moon_behind_large_cloud_color_svg; // custom
+    case "ovc":
+      return cloud_color_svg; // ☁️
+    case "hot":
+    case "cold":
+    case "skc":
+      break;
+    default:
+      icon satisfies never;
   }
 
   return isDaytime
@@ -151,21 +155,22 @@ function emojiFromPhenomenon(phenomenonType: PhenomenonType | null, sky: SkyCove
     : first_quarter_moon_face_color_svg; // 🌛
 }
 
-export default function WeatherEmoji({ current, lat, lon }: { current: WeatherConditions | string, lat: number, lon: number }) {
+export default function WeatherEmoji({ current, lat, lon, time }: { current: WeatherConditions | NwsIcon, lat: number, lon: number, time?: string }) {
   const now = useTime(60 * 1000);
+  const displayTime = time === undefined ? now : Temporal.Instant.from(time);
 
   const emoji = useMemo(() => {
-    const nowDate = new Date(now.epochMilliseconds);
+    const nowDate = new Date(displayTime.epochMilliseconds);
     const sunPosition = SunCalc.getPosition(nowDate, lat, lon);
     const isDaytime = sunPosition.altitude > 0;
 
     if (typeof current === "string") {
-      return emojiFromDescription(current, isDaytime);
+      return emojiFromNwsIcon(current, isDaytime);
     }
     else {
       return emojiFromPhenomenon(current.phenomena.at(0)?.type ?? null, current.skyCoverage, isDaytime);
     }
-  }, [current, lat, lon, now.epochMilliseconds]);
+  }, [current, lat, lon, displayTime.epochMilliseconds]);
 
   return <div className="weather-emoji"><img src={emoji} /></div>;
 }

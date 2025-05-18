@@ -1,6 +1,7 @@
 .weather-emoji {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 }
 
 .weather-emoji img {
