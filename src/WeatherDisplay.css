@@ -1,13 +1,12 @@
 .weather-display {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
     overflow: hidden;
     hyphens: auto;
 }
 
 .weather-display>div {
     padding: 0.2rem 0.6rem;
-    flex: none;
 }
 
 .weather-display>div:first-child {
@@ -33,7 +32,7 @@
     padding: 0.2em;
     border-radius: 10em;
     overflow: visible;
-    background-color: rgba(0, 0, 0, 40%);
+    background-color: rgba(0, 0, 0, 50%);
 }
 
 .weather-display-icon-temp {
@@ -52,10 +51,7 @@
     font-size: 1.2em;
     color: var(--light-text-color);
     margin-left: 0.1em;
-}
 
-.weather-display-subtitle>span:not(:last-child)::after {
-    content: "\2022";
-    margin-left: 0.3em;
-    margin-right: 0.3em;
+    display: flex;
+    flex-flow: column wrap;
 }
