@@ -2,6 +2,7 @@
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr);
     overflow: hidden;
+    word-break: break-all;
     hyphens: auto;
 }
 
@@ -15,10 +16,6 @@
 
 .weather-display>div:last-child {
     padding-bottom: 0.6rem;
-}
-
-.weather-display>div:not(:first-child) {
-    font-weight: 400;
 }
 
 .weather-display-icon-temp {

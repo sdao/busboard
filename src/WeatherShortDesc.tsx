@@ -158,7 +158,7 @@ export default function WeatherShortDesc({ current, showIntensity }: { current: 
     }
 
     return "Clear";
-  }, [current.phenomena, current.skyCoverage]);
+  }, [current.phenomena, current.skyCoverage, showIntensity]);
 
   return <div>{description}</div>;
 }
