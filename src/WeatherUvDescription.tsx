@@ -66,6 +66,6 @@ export default function WeatherUvDescription({ uvForecast, lat, lon }: { uvForec
     else {
       indicatorClassName += "weather-indicator-very-high";
     }
-    return <span><span className="weather-display-label"><span className={indicatorClassName} />&nbsp;UV</span> {uvIndex}&thinsp;/&thinsp;{maxUvToday}</span>;
+    return <span><span className="weather-display-label">UV</span> {uvIndex}&thinsp;/&thinsp;{maxUvToday}<span className={indicatorClassName}></span></span>;
   }
 }

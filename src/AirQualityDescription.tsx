@@ -25,7 +25,7 @@ export default function AirQualityDescription({ aqi }: { aqi: AirQuality }) {
         else {
             indicatorClassName += "weather-indicator-very-high";
         }
-        return <span><span className="weather-display-label"><span className={indicatorClassName} /> AQI</span> {aqiValue}</span>;
+        return <span><span className="weather-display-label">AQI</span> {aqiValue}<span className={indicatorClassName}></span></span>;
     }
 
     return <></>;

@@ -21,7 +21,7 @@
     grid-area: temp;
 }
 
-.weather-display-icon { 
+.weather-display-icon {
     font-size: 2.5em;
     margin-bottom: 0.2rem;
     grid-area: icon;
@@ -76,27 +76,30 @@
 
 .weather-indicator::after {
     content: "\2022";
-    font-size: 2em;
-    line-height: 0.5em;
-    vertical-align: text-top;
+    color: transparent;
+    font-size: 1.5em;
+    line-height: 0.67em;
+    vertical-align: top;
+    margin-left: 0.25ex;
+    margin-right: 0;
 }
 
 .weather-indicator-good {
-    color: olivedrab;
+    background: linear-gradient(to bottom, greenyellow 25%, transparent 75%) text;
 }
 
 .weather-indicator-low {
-    color: gold;
+    background: linear-gradient(to bottom, gold 25%, transparent 75%) text;
 }
 
 .weather-indicator-moderate {
-    color: orange;
+    background: linear-gradient(to bottom, orange 25%, transparent 75%) text;
 }
 
 .weather-indicator-high {
-    color: tomato;
+    background: linear-gradient(to bottom, tomato 25%, transparent 75%) text;
 }
 
 .weather-indicator-very-high {
-    color: orchid;
+    background: linear-gradient(to bottom, orchid 25%, transparent 75%) text;
 }

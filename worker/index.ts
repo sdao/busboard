@@ -399,7 +399,7 @@ async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay
 }
 
 async function getAqi(airNowApiKey: string, { zip }: { zip: string }): Promise<AirQuality> {
-  const response = await fetch(`http://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=${zip}&distance=25&API_KEY=${airNowApiKey}`,
+  const response = await fetch(`https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=${zip}&distance=25&API_KEY=${airNowApiKey}`,
     {
       cf: {
         "cacheEverything": true,
