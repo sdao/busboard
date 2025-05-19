@@ -2,16 +2,16 @@ import { Temporal } from "@js-temporal/polyfill";
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, WeatherForecastHour, isNwsIcon } from "../shared/types";
+import { WeatherConditions, WeatherForecast, UvForecastDay, ReverseGeocode, UvForecastHour, WeatherForecastHour, AirQuality, isNwsIcon } from "../shared/types";
 import { decodeMetar } from "../shared/metar";
 import { HTTPException } from "hono/http-exception";
 
-async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat, lon }: { lat: number, lon: number }): Promise<ReverseGeocode> {
+async function getReverseGeocode(osmUserAgent: string, nwsUserAgent: string, { lat, lon }: { lat: number, lon: number }): Promise<ReverseGeocode> {
   let zip: string;
   {
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
       headers: {
-        "user-agent": userAgent
+        "user-agent": osmUserAgent
       },
       cf: {
         "cacheEverything": true,
@@ -54,7 +54,7 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
   {
     const response = await fetch(`https://api.weather.gov/points/${lat},${lon}`, {
       headers: {
-        "user-agent": weatherApiKey
+        "user-agent": nwsUserAgent
       },
       cf: {
         "cacheEverything": true
@@ -103,7 +103,7 @@ async function getReverseGeocode(userAgent: string, weatherApiKey: string, { lat
   {
     const response = await fetch(observationStationsUri, {
       headers: {
-        "user-agent": weatherApiKey
+        "user-agent": nwsUserAgent
       },
       cf: {
         "cacheEverything": true
@@ -236,10 +236,10 @@ async function getMetar({ station }: { station: string }): Promise<WeatherCondit
 
 const ICON_URL_REGEX = /(?:night|day)\/([a-z_]+)/;
 
-async function getWeatherForecast(apiKey: string, { wfo, x, y }: { wfo: string, x: number, y: number }): Promise<WeatherForecast> {
+async function getWeatherForecast(userAgent: string, { wfo, x, y }: { wfo: string, x: number, y: number }): Promise<WeatherForecast> {
   const response = await fetch(`https://api.weather.gov/gridpoints/${wfo}/${x},${y}/forecast/hourly`, {
     headers: {
-      "user-agent": apiKey,
+      "user-agent": userAgent,
       "feature-flags": "forecast_temperature_qv",
     }
   });
@@ -398,6 +398,50 @@ async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay
   return { forecasts };
 }
 
+async function getAqi(airNowApiKey: string, { zip }: { zip: string }): Promise<AirQuality> {
+  const response = await fetch(`http://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=${zip}&distance=25&API_KEY=${airNowApiKey}`,
+    {
+      cf: {
+        "cacheEverything": true,
+        "cacheTtlByStatus": {
+          "200-299": 1800 // cache successful responses for 30 minutes
+        }
+      }
+    });
+
+  const { ok, headers } = response;
+  if (!ok) {
+    throw new HTTPException(undefined, { message: `<${response.url}> responded with: ${response.status}` });
+  }
+
+  const contentType = headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new HTTPException(undefined, { message: `<${response.url}> did not respond with JSON content` });
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  }
+  catch (e) {
+    throw new HTTPException(undefined, { message: `Error parsing JSON: ${e}`, cause: e });
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new HTTPException(undefined, { message: `<${response.url}> response JSON is not an array as expected` });
+  }
+
+  let maxAqi = -1;
+  for (const report of payload as unknown[]) {
+    if (typeof report === "object" && report !== null &&
+      "AQI" in report && typeof report.AQI === "number") {
+        maxAqi = Math.max(maxAqi, report.AQI);
+      }
+  }
+
+  return { AQI: maxAqi >= 0 ? maxAqi : null };
+}
+
 const app = new Hono<{ Bindings: Env }>()
   .get(
     "/metar",
@@ -418,7 +462,7 @@ const app = new Hono<{ Bindings: Env }>()
         y: z.coerce.number().int(),
       })
     ),
-    async (c) => c.json(await getWeatherForecast(c.env.WEATHER_API_KEY, c.req.valid("query"))))
+    async (c) => c.json(await getWeatherForecast(c.env.NWS_USER_AGENT, c.req.valid("query"))))
   .get(
     "/uv",
     zValidator(
@@ -428,6 +472,15 @@ const app = new Hono<{ Bindings: Env }>()
       })
     ),
     async (c) => c.json(await getUvForecastDay(c.req.valid("query"))))
+  .get(
+    "/aqi",
+    zValidator(
+      "query",
+      z.object({
+        zip: z.string(),
+      })
+    ),
+    async (c) => c.json(await getAqi(c.env.AIRNOW_API_KEY, c.req.valid("query"))))
   .get(
     "/geo",
     zValidator(
@@ -439,7 +492,7 @@ const app = new Hono<{ Bindings: Env }>()
     ),
     async (c) => {
       c.header("Cache-Control", "max-age=86400")
-      return c.json(await getReverseGeocode(c.env.OSM_NOMINATIM_USER_AGENT, c.env.WEATHER_API_KEY, c.req.valid("query")));
+      return c.json(await getReverseGeocode(c.env.OSM_NOMINATIM_USER_AGENT, c.env.NWS_USER_AGENT, c.req.valid("query")));
     })
   .get("/realtime", getGtfsRealtime)
   .get("/gtfs", getGtfsStatic)

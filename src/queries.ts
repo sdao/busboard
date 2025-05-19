@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { hc } from "hono/client";
-import { BusTimes, ReverseGeocode, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
+import { AirQuality, BusTimes, ReverseGeocode, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
 import type { AppType } from "../worker/index";
 import BusTimesBuilder from '../shared/busTimesBuilder';
 import TransitSystemInfoBuilder from '../shared/transitSystemInfoBuilder';
@@ -165,5 +165,29 @@ export function getUvForecastQuery(reverseGeocode?: ReverseGeocode) {
         },
         enabled: reverseGeocode !== undefined,
         refetchInterval: 60 * 60 * 1000
+    });
+}
+
+export function getAqiQuery(reverseGeocode?: ReverseGeocode) {
+    return queryOptions({
+        queryKey: ["aqi", reverseGeocode?.zip],
+        queryFn: async (): Promise<AirQuality> => {
+            if (reverseGeocode !== undefined) {
+                console.log(`Fetching AQI for ${reverseGeocode.zip}...`);
+
+                const response = await client.aqi.$get({ query: {  zip: reverseGeocode.zip } });
+                if (!response.ok) {
+                    throw new Error(`Error fetching AQI (response status ${response.status} ${response.statusText})`);
+                }
+
+                const result: AirQuality = await response.json();
+                console.info(`Received AQI: ${result.AQI}`);
+                return result;
+            }
+
+            return { AQI: null };
+        },
+        enabled: reverseGeocode !== undefined,
+        refetchInterval: 15 * 60 * 1000
     });
 }

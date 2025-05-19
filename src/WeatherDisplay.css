@@ -1,54 +1,102 @@
 .weather-display {
+    --weather-display-padding: 0.6rem;
+
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "temp        icon"
+        "description description"
+        "subtitle    subtitle";
+    gap: 0.2rem;
+    padding: var(--weather-display-padding);
     overflow: hidden;
-    word-break: break-all;
+    overflow-wrap: break-word;
     hyphens: auto;
 }
 
-.weather-display>div {
-    padding: 0.2rem 0.6rem;
+.weather-display-temp {
+    font-size: 3.3em;
+    margin-bottom: 0.2rem;
+    grid-area: temp;
 }
 
-.weather-display>div:first-child {
-    padding-top: 0.6rem;
+.weather-display-icon { 
+    font-size: 2.5em;
+    margin-bottom: 0.2rem;
+    grid-area: icon;
 }
 
-.weather-display>div:last-child {
-    padding-bottom: 0.6rem;
-}
-
-.weather-display-icon-temp {
-    display: grid;
-    grid-template-columns: minmax(0, 100%) 1fr;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.weather-display-icon-temp>.weather-emoji {
+.weather-display-icon>.weather-emoji {
     padding: 0.2em;
+    vertical-align: middle;
     border-radius: 10em;
     overflow: visible;
-    background-color: rgba(0, 0, 0, 60%);
-}
-
-.weather-display-icon-temp {
-    font-size: 2.5em;
-}
-
-.weather-display-icon-temp>div {
-    font-size: 1.3em;
+    background-color: hsl(from var(--panel-background-color) h calc(s * 2) calc(l * 0.5));
 }
 
 .weather-display-description {
     font-size: 2em;
+    grid-area: description;
 }
 
 .weather-display-subtitle {
     font-size: 1.3em;
+    grid-area: subtitle;
+
     color: var(--light-text-color);
     margin-left: 0.1em;
 
     display: flex;
     flex-flow: column wrap;
+    align-items: stretch;
+    column-gap: 1ex;
+}
+
+.weather-display-subtitle-uv-aqi>span {
+    margin-right: 1ex;
+}
+
+/** Overflowing text will be clipped by the containing <section>.
+    But it will still overflow the padding of .weather-display;
+    we apply a gradient over the padding edge to fade it out.
+ */
+.weather-display::after {
+    content: "";
+    pointer-events: none;
+    background: linear-gradient(to left, var(--panel-background-color), var(--panel-background-color) 0.2rem, transparent var(--weather-display-padding));
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    margin-right: calc(-1 * var(--weather-display-padding));
+}
+
+.weather-display-label {
+    font-weight: 300;
+}
+
+.weather-indicator::after {
+    content: "\2022";
+    font-size: 2em;
+    line-height: 0.5em;
+    vertical-align: text-top;
+}
+
+.weather-indicator-good {
+    color: greenyellow;
+}
+
+.weather-indicator-low {
+    color: gold;
+}
+
+.weather-indicator-moderate {
+    color: orange;
+}
+
+.weather-indicator-high {
+    color: tomato;
+}
+
+.weather-indicator-very-high {
+    color: orchid;
 }

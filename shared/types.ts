@@ -29,6 +29,8 @@ export type NwsIcon = typeof NWS_ICONS[number];
 export type UvForecastHour = { uvIndex: number, time: string };
 export type UvForecastDay = { forecasts: UvForecastHour[] };
 
+export type AirQuality = { AQI: number | null };
+
 export type ReverseGeocode = { lat: number, lon: number, zip: string, weatherTile: { wfo: string, x: number, y: number }, weatherStation: string, radarStation: string };
 
 export function isPhenomenonType(s: unknown): s is PhenomenonType {

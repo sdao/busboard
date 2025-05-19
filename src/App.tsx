@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useSyncExternalStore } from "react"
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider, UseQueryResult } from "@tanstack/react-query";
 import { Temporal } from "@js-temporal/polyfill";
 
-import { getGtfsRealtimeQuery, getGtfsStaticQuery, getReverseGeocodeQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
+import { getAqiQuery, getGtfsRealtimeQuery, getGtfsStaticQuery, getReverseGeocodeQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
 import { isPrecipitation } from "../shared/types";
 import BusTimeDisplay from "./BusTimeDisplay";
 import Marquee from "./Marquee";
@@ -71,6 +71,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   const weatherCurrent = useQuery(getWeatherCurrentQuery(reverseGeocode.data));
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));
+  const aqi = useQuery(getAqiQuery(reverseGeocode.data));
 
   const now = useTime(60 * 1000);
 
@@ -140,7 +141,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
       }
       <>
         <section className="weather-display-section">
-          {weatherCurrent.data !== undefined ? <WeatherDisplay current={weatherCurrent.data} forecast={weatherForecast.data ?? null} uvForecast={uvForecast.data ?? null} lat={lat} lon={lon} /> : <></>}
+          {weatherCurrent.data !== undefined ? <WeatherDisplay current={weatherCurrent.data} forecast={weatherForecast.data} uvForecast={uvForecast.data} aqi={aqi.data} lat={lat} lon={lon} /> : <></>}
         </section>
         {showRadar
           ? (
@@ -158,6 +159,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
         <DisplayQueryError displayName="Current weather" useQueryResult={weatherCurrent} />
         <DisplayQueryError displayName="Weather forecast" useQueryResult={weatherForecast} />
         <DisplayQueryError displayName="UV forecast" useQueryResult={uvForecast} />
+        <DisplayQueryError displayName="Air quality" useQueryResult={aqi} />
       </footer>
     </>
   );
