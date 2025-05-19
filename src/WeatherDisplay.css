@@ -53,6 +53,8 @@
 
 .weather-display-subtitle-uv-aqi>span {
     margin-right: 1ex;
+    /* Prevent wrapping within the UV or AQI field */
+    white-space: nowrap;
 }
 
 /** Overflowing text will be clipped by the containing <section>.

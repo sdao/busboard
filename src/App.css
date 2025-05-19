@@ -45,12 +45,14 @@ main {
 	height: 100vh;
 	box-sizing: border-box;
 	padding: 0.3rem;
-	gap: 0.2rem;
+	gap: 0.25rem;
 }
 
 section {
 	background-color: var(--panel-background-color);
 	border-radius: 1.4rem;
+	outline: 2px solid var(--panel-background-color);
+    outline-offset: -1px;
 	overflow: hidden;
 }
 
@@ -83,7 +85,7 @@ footer em {
 .weather-forecast-list {
 	display: flex;
 	flex-direction: column;
-	gap: 0.15rem;
+	gap: 0.2rem;
 	grid-area: main2;
 }
 
