@@ -3,6 +3,7 @@ import SunCalc from "suncalc";
 import { Temporal } from "@js-temporal/polyfill";
 import { UvForecastDay } from "../shared/types";
 import { useTime } from "./hooks";
+import LevelIndicator from "./LevelIndicator";
 
 export default function WeatherUvDescription({ uvForecast, lat, lon }: { uvForecast: UvForecastDay, lat: number, lon: number }) {
   const now = useTime(60 * 1000);
@@ -50,22 +51,22 @@ export default function WeatherUvDescription({ uvForecast, lat, lon }: { uvForec
     return <span><span className="weather-display-label">UV High</span> {maxUvToday}</span>;
   }
   else {
-    let indicatorClassName = "weather-indicator ";
+    let level: "good" | "low" | "moderate" | "high" | "very_high";
     if (uvIndex <= 2) {
-      indicatorClassName += "weather-indicator-good";
+      level = "good";
     }
     else if (uvIndex <= 5) {
-      indicatorClassName += "weather-indicator-low";
+      level = "low";
     }
     else if (uvIndex <= 7) {
-      indicatorClassName += "weather-indicator-moderate";
+      level = "moderate";
     }
     else if (uvIndex <= 10) {
-      indicatorClassName += "weather-indicator-high";
+      level = "high";
     }
     else {
-      indicatorClassName += "weather-indicator-very-high";
+      level = "very_high";
     }
-    return <span><span className="weather-display-label">UV</span> {uvIndex}&thinsp;/&thinsp;{maxUvToday}<span className={indicatorClassName}></span></span>;
+    return <span><span className="weather-display-label">UV</span> {uvIndex}&thinsp;/&thinsp;{maxUvToday}<LevelIndicator level={level} /></span>;
   }
 }

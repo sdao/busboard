@@ -1,4 +1,5 @@
 import { AirQuality } from "../shared/types";
+import LevelIndicator from "./LevelIndicator";
 
 export default function AirQualityDescription({ aqi }: { aqi: AirQuality }) {
     // 0-50: good - green
@@ -9,23 +10,23 @@ export default function AirQualityDescription({ aqi }: { aqi: AirQuality }) {
     // 301+: hazardous - maroon
     const aqiValue = aqi?.AQI;
     if (aqiValue !== null && aqiValue !== undefined) {
-        let indicatorClassName = "weather-indicator ";
+        let level: "good" | "low" | "moderate" | "high" | "very_high";
         if (aqiValue <= 50) {
-            indicatorClassName += "weather-indicator-good";
+            level = "good";
         }
         else if (aqiValue <= 100) {
-            indicatorClassName += "weather-indicator-low";
+            level = "low";
         }
         else if (aqiValue <= 150) {
-            indicatorClassName += "weather-indicator-moderate";
+            level = "moderate";
         }
         else if (aqiValue <= 200) {
-            indicatorClassName += "weather-indicator-high";
+            level = "high";
         }
         else {
-            indicatorClassName += "weather-indicator-very-high";
+            level = "very_high";
         }
-        return <span><span className="weather-display-label">AQI</span> {aqiValue}<span className={indicatorClassName}></span></span>;
+        return <span><span className="weather-display-label">AQI</span> {aqiValue}<LevelIndicator level={level} /></span>;
     }
 
     return <></>;
