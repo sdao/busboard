@@ -14,7 +14,10 @@ export default function WeatherForecastTile({ lat, lon, forecastHour }: { lat: n
     return (
         <div className="forecast-hour">
             <div className="forecast-hour-time">{timeString}</div>
-            <div className="forecast-hour-emoji"><WeatherEmoji lat={lat} lon={lon} current={forecastHour.icon} time={forecastHour.time} /></div>
+            <div className="forecast-hour-emoji">
+                <WeatherEmoji lat={lat} lon={lon} current={forecastHour.icon} time={forecastHour.time} />
+                {forecastHour.chancePrecipitation >= 5 ? <span className="forecast-hour-emoji-badge">{Math.round(forecastHour.chancePrecipitation / 5) * 5}%</span> : <></>}
+            </div>
             <div className="forecast-hour-temp">{celsiusToFahrenheit(forecastHour.temperature)}&deg;</div>
         </div>
     );

@@ -15,7 +15,24 @@
 
 .forecast-hour-emoji {
     display: grid;
+    grid-template-areas: "overlapped_space";
     justify-content: center;
+}
+
+.forecast-hour-emoji>img,
+.forecast-hour-emoji-badge {
+    grid-area: overlapped_space;
+}
+
+.forecast-hour-emoji-badge {
+    font-size: 0.33em;
+    font-weight: 400;
+    background-color: hsl(from var(--panel-background-color) h s calc(l * 0.5) / 75% );
+    border-radius: 2ex;
+    backdrop-filter: blur(0.25ex);
+    padding: 0 0.5ex;
+    align-self: flex-end;
+    justify-self: center;
 }
 
 .forecast-hour-temp {
