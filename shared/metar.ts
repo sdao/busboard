@@ -5,10 +5,12 @@ import { Phenomenon, PhenomenonType, PhenomenonIntensity, PhenomenonModifier, Sk
 const SKY_COVERAGE_REGEX = / (SKC|CLR|(?:FEW|SCT|BKN|OVC|VV)(?:\d{3})(?:CB)?)/g;
 // Capture groups: [1] +|- intensity [2] rest of the phenomenon code(s)
 const PHENOMENON_REGEX = / (\+|-)?((?:VC|RE|MI|BC|DR|BL|SH|TS|FZ|PR|DZ|RA|SN|SG|IC|PL|GR|GS|UP|BR|FG|FU|DU|SA|HZ|PY|VA|PO|SQ|FC|SS|DS)+)/g;
+// Capture groups: [1] M for negative, empty for positive [2] temperature in degrees Celsius
+const STANDARD_TEMPERATURE_REGEX = / (M?)([0-9][0-9])\/M?[0-9][0-9]/;
 
 // This is a non-standard METAR field used in the United States; it comes after RMK
 // Capture groups: [1] 0|1 negative indicator [2] temperature in tenths of a degree Celsius [3] dew point
-const TEMPERATURE_REGEX = / T([01])([0-9]{3})(?:[0-9]{4})/;
+const EXTENDED_TEMPERATURE_REGEX = / T([01])([0-9]{3})(?:[0-9]{4})/;
 
 function getSkyCoverage(standardMessage: string): SkyCoverage {
     let maxLevel: SkyCoverage = "SKC";
@@ -164,10 +166,20 @@ function getPhenomena(standardMessage: string): Phenomenon[] {
     return phenomena;
 }
 
-function getTemperatureCelsius(extendedMessage: string): number | null {
-    const match = extendedMessage.match(TEMPERATURE_REGEX);
+function getStandardTemperatureCelsius(standardMessage: string) : number | null {
+    const match = standardMessage.match(STANDARD_TEMPERATURE_REGEX);
+    if (match !== null && match.length >= 3 && match[1] !== undefined && match[2] !== undefined) {
+        const negative = match[1] === "M" ? -1 : 1;
+        const absTempC = parseInt(match[2]);
+        return negative * absTempC;
+    }
+    return null;
+}
+
+function getExtendedTemperatureCelsius(extendedMessage: string): number | null {
+    const match = extendedMessage.match(EXTENDED_TEMPERATURE_REGEX);
     if (match !== null && match.length >= 3 && match[1] !== undefined && match[2] !== undefined)  {
-        const negative = match[1] == "1" ? -1 : 1;
+        const negative = match[1] === "1" ? -1 : 1;
         const absTempC = parseInt(match[2]) / 10.0;
         return negative * absTempC;
     }
@@ -176,10 +188,13 @@ function getTemperatureCelsius(extendedMessage: string): number | null {
 }
 
 export function decodeMetar(rawMessage: string): WeatherConditions | null {
-    const temperature = getTemperatureCelsius(rawMessage);
+    const remarksIndex = rawMessage.indexOf(" RMK");
+    const standardMessage = remarksIndex >= 0 ? rawMessage.substring(0, remarksIndex) : rawMessage;
+
+    // Need to get temperature in either standard form or extended/US form,
+    // but prefer the US form because it's more precise
+    const temperature = getExtendedTemperatureCelsius(rawMessage) ?? getStandardTemperatureCelsius(standardMessage);
     if (temperature !== null) {
-        const remarksIndex = rawMessage.indexOf(" RMK");
-        const standardMessage = remarksIndex >= 0 ? rawMessage.substring(0, remarksIndex) : rawMessage;
         return { rawMessage, temperature, phenomena: getPhenomena(standardMessage), skyCoverage: getSkyCoverage(standardMessage) };
     }
 
