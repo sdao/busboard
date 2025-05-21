@@ -139,19 +139,21 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
           </header>
         : <></>
       }
-      <>
-        <section className="weather-display-section">
-          {weatherCurrent.data !== undefined ? <WeatherDisplay current={weatherCurrent.data} forecast={weatherForecast.data} uvForecast={uvForecast.data} aqi={aqi.data} lat={lat} lon={lon} /> : <></>}
-        </section>
-        {showRadar
-          ? (
-            <section className="weather-radar">
-              <RadarMap lat={lat} lon={lon} radarStation={reverseGeocode.data?.radarStation} />
-            </section>
-          )
-          : <div className="weather-forecast-list">{forecastRows}</div>
-        }
-      </>
+      {weatherCurrent.data !== undefined ? (
+          <section className="weather-display-section">
+            <WeatherDisplay current={weatherCurrent.data} forecast={weatherForecast.data} uvForecast={uvForecast.data} aqi={aqi.data} lat={lat} lon={lon} />
+          </section>
+        )
+        : <></>
+      }
+      {showRadar
+        ? (
+          <section className="weather-radar">
+            <RadarMap lat={lat} lon={lon} radarStation={reverseGeocode.data?.radarStation} />
+          </section>
+        )
+        : <div className="weather-forecast-list">{forecastRows}</div>
+      }
       <footer>
         <DisplayQueryError displayName="Location information" useQueryResult={reverseGeocode} />
         <DisplayQueryError displayName="Transit agency info" useQueryResult={transitInfo} />
