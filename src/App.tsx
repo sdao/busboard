@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useSyncExternalStore } from "react"
-import { useQuery, useQueryClient, QueryClient, QueryClientProvider, UseQueryResult } from "@tanstack/react-query";
+import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Temporal } from "@js-temporal/polyfill";
 
 import { getAqiQuery, getGtfsRealtimeQuery, getGtfsStaticQuery, getReverseGeocodeQuery, getUvForecastQuery, getWeatherCurrentQuery, getWeatherForecastQuery } from "./queries";
@@ -44,22 +44,6 @@ function AutoHideMouseCursor(props: React.PropsWithChildren) {
   const className = showMouseCursor ? "" : (localNow.hour < 6 ? "hide-screen" : "hide-mouse-cursor");
 
   return <div onMouseMove={handleMouseActivity} onPointerDown={handleMouseActivity} className={className}>{props.children}</div>;
-}
-
-function DisplayQueryError({ displayName, useQueryResult }: { displayName: string, useQueryResult: UseQueryResult }) {
-  useEffect(() => {
-    if (useQueryResult.failureReason !== null) {
-      console.error(useQueryResult.failureReason);
-    }
-  }, [useQueryResult.failureReason]);
-
-  if (useQueryResult.failureReason === null) {
-    return <></>;
-  }
-  else {
-    const time = useQueryResult.dataUpdatedAt == 0 ? "never" : `at  ${Temporal.Instant.fromEpochMilliseconds(useQueryResult.dataUpdatedAt).toLocaleString()}`;
-    return <div><span>{displayName} last updated {time} <em>{useQueryResult.failureReason.message}</em></span></div>;
-  }
 }
 
 function Dashboard({ lat, lon }: { lat: number, lon: number }) {
@@ -154,15 +138,6 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
         )
         : <div className="weather-forecast-list">{forecastRows}</div>
       }
-      <footer>
-        <DisplayQueryError displayName="Location information" useQueryResult={reverseGeocode} />
-        <DisplayQueryError displayName="Transit agency info" useQueryResult={transitInfo} />
-        <DisplayQueryError displayName="Realtime arrivals" useQueryResult={busTimes} />
-        <DisplayQueryError displayName="Current weather" useQueryResult={weatherCurrent} />
-        <DisplayQueryError displayName="Weather forecast" useQueryResult={weatherForecast} />
-        <DisplayQueryError displayName="UV forecast" useQueryResult={uvForecast} />
-        <DisplayQueryError displayName="Air quality" useQueryResult={aqi} />
-      </footer>
     </>
   );
 }

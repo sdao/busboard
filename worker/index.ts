@@ -99,7 +99,7 @@ async function getReverseGeocode(osmUserAgent: string, nwsUserAgent: string, { l
   }
 
   let weatherStation: string | null = null;
-  console.log(`Fetching observation stations from <${observationStationsUri}>...`);
+  console.info(`Fetching observation stations from <${observationStationsUri}>...`);
   {
     const response = await fetch(observationStationsUri, {
       headers: {
@@ -435,14 +435,23 @@ async function getAqi(airNowApiKey: string, { zip }: { zip: string }): Promise<A
   for (const report of payload as unknown[]) {
     if (typeof report === "object" && report !== null &&
       "AQI" in report && typeof report.AQI === "number") {
-        maxAqi = Math.max(maxAqi, report.AQI);
-      }
+      maxAqi = Math.max(maxAqi, report.AQI);
+    }
   }
 
   return { AQI: maxAqi >= 0 ? maxAqi : null };
 }
 
 const app = new Hono<{ Bindings: Env }>()
+  .onError((err) => {
+    console.error(err);
+    if (err instanceof HTTPException) {
+      return err.getResponse();
+    }
+    else {
+      throw err;
+    }
+  })
   .get(
     "/metar",
     zValidator(

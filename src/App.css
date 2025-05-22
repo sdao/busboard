@@ -39,8 +39,7 @@ main {
 	grid-template-areas:
 		"toolbar toolbar"
 		"header  header"
-		"main1   main2"
-		"footer  footer";
+		"main1   main2";
 	width: 100vw;
 	height: 100vh;
 	box-sizing: border-box;
@@ -54,27 +53,6 @@ section {
 	outline: 2px solid var(--panel-background-color);
     outline-offset: -1px;
 	overflow: hidden;
-}
-
-footer {
-	font-size: 0.5em;
-	font-weight: 400;
-	grid-area: footer;
-}
-
-footer div {
-	font-size: 1.5em;
-	margin: 0.3rem;
-	color: hsl(0, 0%, 70%);
-}
-
-footer div::before {
-	content: '⚠️';
-	margin-right: 0.5em;
-}
-
-footer em {
-	font-weight: 300;
 }
 
 .weather-display-section {
@@ -130,8 +108,7 @@ footer em {
 			"toolbar"
 			"header"
 			"main1"
-			"main2"
-			"footer";
+			"main2";
 		height: initial;
 	}
 
