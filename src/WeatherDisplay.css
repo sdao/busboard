@@ -36,6 +36,7 @@
 .weather-display-description {
     font-size: 2em;
     grid-area: description;
+    overflow-wrap: normal;
 }
 
 .weather-display-subtitle {
