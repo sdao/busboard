@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { hc } from "hono/client";
-import { AirQuality, BusTimes, ReverseGeocode, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
+import { AirQuality, BusTimes, ReverseGeocode, StopId, TransitSystemInfo, UvForecastDay, WeatherConditions, WeatherForecast } from '../shared/types';
 import type { AppType } from "../worker/index";
 import BusTimesBuilder from '../shared/busTimesBuilder';
 import TransitSystemInfoBuilder from '../shared/transitSystemInfoBuilder';
@@ -47,19 +47,19 @@ export function getGtfsStaticQuery(lat: number, lon: number) {
     });
 }
 
-export function getGtfsRealtimeQuery(transitInfo?: TransitSystemInfo) {
+export function getGtfsRealtimeQuery(stopIds?: StopId[]) {
     return queryOptions({
-        queryKey: ["gtfsRealtime", transitInfo?.closestStops],
+        queryKey: ["gtfsRealtime", stopIds],
         queryFn: async (): Promise<BusTimes> => {
-            if (transitInfo !== undefined && transitInfo.closestStops.length !== 0) {
-                console.log(`Fetching GTFS-Realtime for ${transitInfo.closestStops}...`);
+            if (stopIds !== undefined && stopIds.length !== 0) {
+                console.log(`Fetching GTFS-Realtime for ${stopIds}...`);
 
                 const response = await client.realtime.$get();
                 if (!response.ok) {
                     throw new Error(`Error fetching GTFS-Realtime (response status ${response.status} ${response.statusText})`);
                 }
 
-                const builder = BusTimesBuilder.createFromProtobuf(transitInfo.closestStops, await response.arrayBuffer());
+                const builder = BusTimesBuilder.createFromProtobuf(stopIds, await response.arrayBuffer());
                 const busTimes = builder.build();
                 
                 console.info(`Received GTFS-Realtime: ${busTimes.stops.length} stops`);
@@ -68,7 +68,7 @@ export function getGtfsRealtimeQuery(transitInfo?: TransitSystemInfo) {
 
             return { stops: [] };
         },
-        enabled: transitInfo !== undefined,
+        enabled: stopIds !== undefined,
         refetchInterval: (query) => {
             if (query.state.data !== undefined) {
                 // If there are no more scheduled buses for the night, throttle updates to every ten minutes

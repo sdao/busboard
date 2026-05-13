@@ -47,11 +47,17 @@ function AutoHideMouseCursor(props: React.PropsWithChildren) {
 }
 
 function Dashboard({ lat, lon }: { lat: number, lon: number }) {
+  // Parse stopIds query parameter
+  const paramsString = window.location.search;
+  const searchParams = new URLSearchParams(paramsString);
+  const stopIdsParam = searchParams.get("stopIds");
+  const explicitStopIds = stopIdsParam?.split(",");
+
   // Query hooks
   useQueryClient();
   const reverseGeocode = useQuery(getReverseGeocodeQuery(lat, lon));
   const transitInfo = useQuery(getGtfsStaticQuery(lat, lon));
-  const busTimes = useQuery(getGtfsRealtimeQuery(transitInfo.data));
+  const busTimes = useQuery(getGtfsRealtimeQuery(explicitStopIds ?? transitInfo.data?.closestStops));
   const weatherCurrent = useQuery(getWeatherCurrentQuery(reverseGeocode.data));
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));
@@ -93,8 +99,6 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   }
 
   // Determine if the bus time components and/or radar components should be shown
-  const paramsString = window.location.search;
-  const searchParams = new URLSearchParams(paramsString);
   const forceBus = (() => {
     const flag = searchParams.get("bus");
     if (flag == "1" || flag?.toLowerCase() === "true") return true;
