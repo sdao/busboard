@@ -157,11 +157,18 @@ export default class BusTimesBuilder {
     static createFromProtobuf(stopIds: StopId[], buffer: ArrayBuffer): BusTimesBuilder {
         const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(new Uint8Array(buffer));
 
-        if (typeof feed.header.timestamp !== "number") {
+        let timestamp: number;
+        if (typeof feed.header.timestamp === "number") {
+            timestamp = feed.header.timestamp;
+        }
+        else if (typeof feed.header.timestamp === "object" && feed.header.timestamp !== null) {
+            timestamp = feed.header.timestamp.toNumber();
+        }
+        else {
             throw new Error("missing header.timestamp");
         }
         
-        const builder = new BusTimesBuilder(stopIds, feed.header.timestamp);
+        const builder = new BusTimesBuilder(stopIds, timestamp);
 
         for (const entity of feed.entity) {
             if (entity.tripUpdate !== null && entity.tripUpdate !== undefined) {
@@ -175,8 +182,22 @@ export default class BusTimesBuilder {
                             if (update.stopId !== null && update.stopId !== undefined &&
                                 update.scheduleRelationship !== null && update.scheduleRelationship !== undefined) {
                                 const stopSequence = update.stopSequence ?? undefined;
-                                const arrivalTimestamp = typeof update.arrival?.time == "number" ? update.arrival.time : undefined;
-                                const departureTimestamp = typeof update.departure?.time == "number" ? update.departure.time : undefined;
+
+                                let arrivalTimestamp: number | undefined = undefined;
+                                if (typeof update.arrival?.time === "number") {
+                                    arrivalTimestamp = update.arrival.time;
+                                }
+                                else if (typeof update.arrival?.time === "object" && update.arrival.time !== null) {
+                                    arrivalTimestamp = update.arrival.time.toNumber();
+                                }
+
+                                let departureTimestamp: number | undefined = undefined;
+                                if (typeof update.departure?.time === "number") {
+                                    departureTimestamp = update.departure.time;
+                                }
+                                else if (typeof update.departure?.time === "object" && update.departure.time !== null) {
+                                    departureTimestamp = update.departure.time.toNumber();
+                                }
                                 
                                 const halt = builder.addStop(update.stopId, update.scheduleRelationship, stopSequence, arrivalTimestamp, departureTimestamp);
                                 if (halt) {
