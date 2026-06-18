@@ -61,7 +61,7 @@ function Dashboard({ lat, lon }: { lat: number, lon: number }) {
   const weatherCurrent = useQuery(getWeatherCurrentQuery(reverseGeocode.data));
   const weatherForecast = useQuery(getWeatherForecastQuery(reverseGeocode.data));
   const uvForecast = useQuery(getUvForecastQuery(reverseGeocode.data));
-  const aqi = useQuery(getAqiQuery(reverseGeocode.data));
+  const aqi = useQuery(getAqiQuery(lat, lon));
 
   const now = useTime(60 * 1000);
 

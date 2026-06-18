@@ -168,26 +168,21 @@ export function getUvForecastQuery(reverseGeocode?: ReverseGeocode) {
     });
 }
 
-export function getAqiQuery(reverseGeocode?: ReverseGeocode) {
+export function getAqiQuery(lat: number, lon: number) {
     return queryOptions({
-        queryKey: ["aqi", reverseGeocode?.zip],
+        queryKey: ["aqi", lat, lon],
         queryFn: async (): Promise<AirQuality> => {
-            if (reverseGeocode !== undefined) {
-                console.log(`Fetching AQI for ${reverseGeocode.zip}...`);
+            console.log(`Fetching AQI for ${lat}, ${lon}...`);
 
-                const response = await client.aqi.$get({ query: {  zip: reverseGeocode.zip } });
-                if (!response.ok) {
-                    throw new Error(`Error fetching AQI (response status ${response.status} ${response.statusText})`);
-                }
-
-                const result: AirQuality = await response.json();
-                console.info(`Received AQI: ${result.AQI}`);
-                return result;
+            const response = await client.aqi.$get({ query: {  lat: String(lat), lon: String(lon) } });
+            if (!response.ok) {
+                throw new Error(`Error fetching AQI (response status ${response.status} ${response.statusText})`);
             }
 
-            return { AQI: null };
+            const result: AirQuality = await response.json();
+            console.info(`Received AQI: ${result.AQI}`);
+            return result;
         },
-        enabled: reverseGeocode !== undefined,
         refetchInterval: 15 * 60 * 1000
     });
 }

@@ -398,8 +398,8 @@ async function getUvForecastDay({ zip }: { zip: string }): Promise<UvForecastDay
   return { forecasts };
 }
 
-async function getAqi(airNowApiKey: string, { zip }: { zip: string }): Promise<AirQuality> {
-  const response = await fetch(`https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=${zip}&distance=25&API_KEY=${airNowApiKey}`,
+async function getAqi(airNowApiKey: string, { lat, lon }: { lat: number; lon: number }): Promise<AirQuality> {
+  const response = await fetch(`https://www.airnowapi.org/aq/observation/current/ziplatlong/?format=application/json&latitude=${lat}&longitude=${lon}&API_KEY=${airNowApiKey}`,
     {
       cf: {
         "cacheEverything": true,
@@ -431,11 +431,13 @@ async function getAqi(airNowApiKey: string, { zip }: { zip: string }): Promise<A
     throw new HTTPException(undefined, { message: `<${response.url}> response JSON is not an array as expected` });
   }
 
+  // There is an AQI for each type of pollutant.
+  // Use the maximum AQI.
   let maxAqi = -1;
   for (const report of payload as unknown[]) {
     if (typeof report === "object" && report !== null &&
-      "AQI" in report && typeof report.AQI === "number") {
-      maxAqi = Math.max(maxAqi, report.AQI);
+      "nowcastAQI" in report && typeof report.nowcastAQI === "number") {
+      maxAqi = Math.max(maxAqi, report.nowcastAQI);
     }
   }
 
@@ -486,7 +488,8 @@ const app = new Hono<{ Bindings: Env }>()
     zValidator(
       "query",
       z.object({
-        zip: z.string(),
+        lat: z.coerce.number(),
+        lon: z.coerce.number(),
       })
     ),
     async (c) => c.json(await getAqi(c.env.AIRNOW_API_KEY, c.req.valid("query"))))
