@@ -184,6 +184,8 @@ function App() {
   const [lat, setLat] = useState<number | null>(() => getLocalStorageFloat("lat"));
   const [lon, setLon] = useState<number | null>(() => getLocalStorageFloat("lon"));
 
+  const fullscreenFlag = new URLSearchParams(window.location.search).get("fs");
+  const fullscreenEnabled = fullscreenFlag !== "0" && fullscreenFlag?.toLowerCase() !== "false";
   const isFullscreen = useSyncExternalStore(isFullscreenSubscribe, isFullscreenGetSnapshot);
 
   // Geolocation effect
@@ -222,7 +224,7 @@ function App() {
           ? (
             <main>
               <div className={isFullscreen ? "toolbar toolbar-hidden" : "toolbar"}>
-                <button onClick={() => document.body.requestFullscreen()}>Enter Fullscreen</button>
+                {fullscreenEnabled && <button onClick={() => document.body.requestFullscreen()}>Enter Fullscreen</button>}
               </div>
               <Dashboard lat={lat} lon={lon} />
             </main>
